@@ -1,33 +1,39 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { setAdminToken } from '@/lib/admin-client';
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
+    const cleanUsername = username.trim().toLowerCase();
+
     try {
       const res = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: cleanUsername, password }),
+        credentials: 'include',
       });
 
-      if (res.ok) {
-        router.push('/admin');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (data.token) {
+          setAdminToken(data.token);
+        }
+        // Use window.location.href for iOS Safari to guarantee cookie synchronization
+        window.location.href = '/admin';
       } else {
-        const data = await res.json();
         setError(data.error || 'Invalid credentials');
       }
     } catch {
@@ -70,6 +76,9 @@ export default function AdminLogin() {
                 name="username"
                 type="text"
                 required
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="appearance-none block w-full px-3.5 py-2.5 border border-gray-300 rounded-xl shadow-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1b2a4a] text-base sm:text-sm"
@@ -86,6 +95,9 @@ export default function AdminLogin() {
                 name="password"
                 type="password"
                 required
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="appearance-none block w-full px-3.5 py-2.5 border border-gray-300 rounded-xl shadow-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1b2a4a] text-base sm:text-sm"

@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 const JWT_SECRET_KEY = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET ||
@@ -82,14 +82,18 @@ export async function createSession(userId: number, username: string) {
     .setExpirationTime("24h")
     .sign(JWT_SECRET_KEY);
 
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24, // 24 hours
-    path: "/",
-  });
+  try {
+    const cookieStore = await cookies();
+    cookieStore.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24, // 24 hours
+      path: "/",
+    });
+  } catch {
+    // Context where cookies() is not available (e.g. CLI script or testing)
+  }
 
   return token;
 }
@@ -98,10 +102,30 @@ export async function verifySession(): Promise<{
   userId: number;
   username: string;
 } | null> {
-  const cookieStore = await cookies();
-  const token =
-    cookieStore.get(COOKIE_NAME)?.value ||
-    cookieStore.get("kiyora_admin_session")?.value;
+  let token: string | undefined;
+
+  // 1. Check Authorization header (Bearer <token>) - crucial for iOS Safari / Mobile WebKit
+  try {
+    const reqHeaders = await headers();
+    const authHeader = reqHeaders.get("authorization") || reqHeaders.get("Authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+  } catch {
+    // headers() might not be available in non-request contexts
+  }
+
+  // 2. Check Cookie Store fallback
+  if (!token) {
+    try {
+      const cookieStore = await cookies();
+      token =
+        cookieStore.get(COOKIE_NAME)?.value ||
+        cookieStore.get("kiyora_admin_session")?.value;
+    } catch {
+      // cookies() fallback
+    }
+  }
 
   if (!token) return null;
 

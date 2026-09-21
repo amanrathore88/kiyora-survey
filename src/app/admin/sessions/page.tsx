@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminNav from '@/components/admin/AdminNav';
+import { adminFetch, removeAdminToken, safeFormatDateTime, safeFormatDate, safeFormatTime } from '@/lib/admin-client';
 
 type SessionItem = {
   id: number;
@@ -30,8 +31,9 @@ export default function SessionsPage() {
 
   const fetchSessions = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/sessions');
+      const res = await adminFetch('/api/admin/sessions');
       if (res.status === 401) {
+        removeAdminToken();
         router.push('/admin/login');
         return;
       }
@@ -52,11 +54,16 @@ export default function SessionsPage() {
 
   const handleMarkAbandoned = async (sessionId: number) => {
     try {
-      await fetch('/api/admin/sessions', {
+      const res = await adminFetch('/api/admin/sessions', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, action: 'abandon' }),
       });
+      if (res.status === 401) {
+        removeAdminToken();
+        router.push('/admin/login');
+        return;
+      }
       fetchSessions();
     } catch (error) {
       console.error('Failed to update session status', error);
@@ -66,9 +73,14 @@ export default function SessionsPage() {
   const handleDeleteSession = async (sessionId: number) => {
     setDeletingSessionId(sessionId);
     try {
-      const res = await fetch(`/api/admin/sessions?sessionId=${sessionId}`, {
+      const res = await adminFetch(`/api/admin/sessions?sessionId=${sessionId}`, {
         method: 'DELETE',
       });
+      if (res.status === 401) {
+        removeAdminToken();
+        router.push('/admin/login');
+        return;
+      }
       if (res.ok) {
         setDeleteConfirmSession(null);
         setSuccessMessage(`Session #${sessionId} and all associated data deleted successfully.`);
@@ -89,9 +101,14 @@ export default function SessionsPage() {
   const handleCleanupAbandoned = async () => {
     setCleaningUp(true);
     try {
-      const res = await fetch('/api/admin/sessions?cleanupAbandoned=true', {
+      const res = await adminFetch('/api/admin/sessions?cleanupAbandoned=true', {
         method: 'DELETE',
       });
+      if (res.status === 401) {
+        removeAdminToken();
+        router.push('/admin/login');
+        return;
+      }
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
         setCleanupModalOpen(false);
@@ -114,8 +131,9 @@ export default function SessionsPage() {
     setExporting(true);
     try {
       const statusParam = filter === 'all' ? 'completed' : filter;
-      const res = await fetch(`/api/admin/export?status=${statusParam}`);
+      const res = await adminFetch(`/api/admin/export?status=${statusParam}`);
       if (res.status === 401) {
+        removeAdminToken();
         router.push('/admin/login');
         return;
       }
@@ -269,10 +287,10 @@ export default function SessionsPage() {
                           {getStatusBadge(s.status)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(s.startedAt).toLocaleString()}
+                          {safeFormatDateTime(s.startedAt)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(s.lastActivityAt).toLocaleString()}
+                          {safeFormatDateTime(s.lastActivityAt)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {s.currentQuestionIndex} / 26 Questions
@@ -339,8 +357,8 @@ export default function SessionsPage() {
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>Last Active: {new Date(s.lastActivityAt).toLocaleTimeString()}</span>
-                      <span>Started: {new Date(s.startedAt).toLocaleDateString()}</span>
+                      <span>Last Active: {safeFormatTime(s.lastActivityAt)}</span>
+                      <span>Started: {safeFormatDate(s.startedAt)}</span>
                     </div>
 
                     {/* Action buttons */}

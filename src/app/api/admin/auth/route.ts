@@ -8,19 +8,22 @@ import { ensureDatabaseReady } from "@/lib/init-db";
 export async function POST(req: NextRequest) {
   try {
     await ensureDatabaseReady();
-    const { username, password } = await req.json();
+    const { username: rawUsername, password } = await req.json();
 
-    if (!username || !password) {
+    if (!rawUsername || !password) {
       return NextResponse.json(
         { success: false, error: "Missing username or password" },
         { status: 400 }
       );
     }
 
-    const [adminUser] = await db
-      .select()
-      .from(adminUsers)
-      .where(eq(adminUsers.username, username));
+    const username = String(rawUsername).trim();
+
+    // Query admin user case-insensitively for mobile keyboards (e.g. iPhone auto-capitalization)
+    const allAdmins = await db.select().from(adminUsers);
+    const adminUser = allAdmins.find(
+      (u) => u.username.toLowerCase() === username.toLowerCase()
+    );
 
     if (!adminUser) {
       return NextResponse.json(
@@ -37,7 +40,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await createSession(adminUser.id, adminUser.username);
+    const token = await createSession(adminUser.id, adminUser.username);
     await db
       .update(adminUsers)
       .set({ lastLoginAt: new Date().toISOString() })
@@ -45,6 +48,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      token,
       user: {
         username: adminUser.username,
         displayName: adminUser.displayName,

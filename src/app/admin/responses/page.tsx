@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AdminNav from '@/components/admin/AdminNav';
+import { adminFetch, removeAdminToken, safeFormatDateTime } from '@/lib/admin-client';
 
 type ResponseSummary = {
   sessionId: number;
@@ -30,8 +31,9 @@ export default function ResponsesPage() {
 
   const fetchResponses = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/responses');
+      const res = await adminFetch('/api/admin/responses');
       if (res.status === 401) {
+        removeAdminToken();
         router.push('/admin/login');
         return;
       }
@@ -52,11 +54,16 @@ export default function ResponsesPage() {
 
   const handleToggleArchive = async (sessionId: number, currentArchived: boolean) => {
     try {
-      await fetch('/api/admin/responses', {
+      const res = await adminFetch('/api/admin/responses', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, archive: !currentArchived }),
       });
+      if (res.status === 401) {
+        removeAdminToken();
+        router.push('/admin/login');
+        return;
+      }
       fetchResponses();
     } catch (error) {
       console.error('Failed to update response status', error);
@@ -66,9 +73,14 @@ export default function ResponsesPage() {
   const handleDeleteResponse = async (sessionId: number) => {
     setDeletingSessionId(sessionId);
     try {
-      const res = await fetch(`/api/admin/responses?sessionId=${sessionId}`, {
+      const res = await adminFetch(`/api/admin/responses?sessionId=${sessionId}`, {
         method: 'DELETE',
       });
+      if (res.status === 401) {
+        removeAdminToken();
+        router.push('/admin/login');
+        return;
+      }
       if (res.ok) {
         setDeleteConfirmSession(null);
         setSuccessMessage(`Response #${sessionId} and session token deleted successfully.`);
@@ -89,8 +101,9 @@ export default function ResponsesPage() {
   const handleExportCSV = async () => {
     setExporting(true);
     try {
-      const res = await fetch(`/api/admin/export?filter=${filter}`);
+      const res = await adminFetch(`/api/admin/export?filter=${filter}`);
       if (res.status === 401) {
+        removeAdminToken();
         router.push('/admin/login');
         return;
       }
@@ -207,7 +220,7 @@ export default function ResponsesPage() {
                           </div>
                           <div className="mt-1.5 flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
                             <span>
-                              Submitted: {r.submittedAt ? new Date(r.submittedAt).toLocaleString() : 'N/A'}
+                              Submitted: {safeFormatDateTime(r.submittedAt)}
                             </span>
                             <span>•</span>
                             <span>Recorded Answers: <strong>{r.answerCount}</strong></span>

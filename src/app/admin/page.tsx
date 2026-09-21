@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminNav from '@/components/admin/AdminNav';
+import { adminFetch, removeAdminToken } from '@/lib/admin-client';
 
 type DashboardStats = {
   totalSessions: number;
@@ -29,11 +30,12 @@ export default function AdminDashboard() {
     const fetchDashboardData = async () => {
       try {
         const [sessionsRes, analyticsRes] = await Promise.all([
-          fetch('/api/admin/sessions'),
-          fetch('/api/admin/analytics'),
+          adminFetch('/api/admin/sessions'),
+          adminFetch('/api/admin/analytics'),
         ]);
 
         if (sessionsRes.status === 401 || analyticsRes.status === 401) {
+          removeAdminToken();
           router.push('/admin/login');
           return;
         }
@@ -117,8 +119,9 @@ export default function AdminDashboard() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const res = await fetch('/api/admin/export');
+      const res = await adminFetch('/api/admin/export');
       if (res.status === 401) {
+        removeAdminToken();
         router.push('/admin/login');
         return;
       }

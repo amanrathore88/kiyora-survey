@@ -3,19 +3,21 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { adminFetch, removeAdminToken } from '@/lib/admin-client';
 
 export default function AdminNav() {
-  const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/admin/auth', { method: 'DELETE' });
-      router.push('/admin/login');
+      await adminFetch('/api/admin/auth', { method: 'DELETE' });
     } catch (error) {
       console.error('Logout failed', error);
+    } finally {
+      removeAdminToken();
+      window.location.href = '/admin/login';
     }
   };
 

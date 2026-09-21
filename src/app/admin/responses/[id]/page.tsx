@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import AdminNav from '@/components/admin/AdminNav';
+import { adminFetch, removeAdminToken, safeFormatDateTime } from '@/lib/admin-client';
 
 type AnswerDetail = {
   questionNumber: string;
@@ -36,8 +37,9 @@ export default function ResponseDetailPage() {
 
   const fetchResponseDetail = useCallback(async () => {
     try {
-      const res = await fetch(`/api/admin/responses/${id}`);
+      const res = await adminFetch(`/api/admin/responses/${id}`);
       if (res.status === 401) {
+        removeAdminToken();
         router.push('/admin/login');
         return;
       }
@@ -64,11 +66,16 @@ export default function ResponseDetailPage() {
   const handleToggleArchive = async () => {
     if (!response) return;
     try {
-      await fetch('/api/admin/responses', {
+      const res = await adminFetch('/api/admin/responses', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: response.sessionId, archive: !response.isArchived }),
       });
+      if (res.status === 401) {
+        removeAdminToken();
+        router.push('/admin/login');
+        return;
+      }
       fetchResponseDetail();
     } catch (error) {
       console.error('Failed to update response status', error);
@@ -79,9 +86,14 @@ export default function ResponseDetailPage() {
     if (!response) return;
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/admin/responses/${response.sessionId}`, {
+      const res = await adminFetch(`/api/admin/responses/${response.sessionId}`, {
         method: 'DELETE',
       });
+      if (res.status === 401) {
+        removeAdminToken();
+        router.push('/admin/login');
+        return;
+      }
       if (res.ok) {
         router.push('/admin/responses');
       } else {
@@ -187,13 +199,13 @@ export default function ResponseDetailPage() {
               <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">Session Started</dt>
                 <dd className="mt-1 text-xs sm:text-sm text-gray-700">
-                  {new Date(response.startedAt).toLocaleString()}
+                  {safeFormatDateTime(response.startedAt)}
                 </dd>
               </div>
               <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">Completed At</dt>
                 <dd className="mt-1 text-xs sm:text-sm text-gray-700">
-                  {response.completedAt ? new Date(response.completedAt).toLocaleString() : 'In Progress'}
+                  {response.completedAt ? safeFormatDateTime(response.completedAt) : 'In Progress'}
                 </dd>
               </div>
             </dl>

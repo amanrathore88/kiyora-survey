@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminNav from '@/components/admin/AdminNav';
+import { adminFetch, removeAdminToken } from '@/lib/admin-client';
 
 type QuestionOptionItem = {
   id: number;
@@ -89,8 +90,9 @@ export default function QuestionsPage() {
     setLoading(true);
     setFetchError(null);
     try {
-      const res = await fetch('/api/admin/questions');
+      const res = await adminFetch('/api/admin/questions');
       if (res.status === 401) {
+        removeAdminToken();
         router.push('/admin/login');
         return;
       }
@@ -121,11 +123,16 @@ export default function QuestionsPage() {
 
   const handleAction = async (id: number, action: string, newOrderIndex?: number) => {
     try {
-      await fetch('/api/admin/questions', {
+      const res = await adminFetch('/api/admin/questions', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionId: id, action, newOrderIndex }),
       });
+      if (res.status === 401) {
+        removeAdminToken();
+        router.push('/admin/login');
+        return;
+      }
       fetchQuestions();
     } catch (error) {
       console.error('Failed to perform action', error);
@@ -135,9 +142,14 @@ export default function QuestionsPage() {
   const handleDeleteQuestion = async (questionId: number) => {
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/admin/questions?id=${questionId}`, {
+      const res = await adminFetch(`/api/admin/questions?id=${questionId}`, {
         method: 'DELETE',
       });
+      if (res.status === 401) {
+        removeAdminToken();
+        router.push('/admin/login');
+        return;
+      }
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
         setDeleteConfirmQuestion(null);
@@ -266,7 +278,7 @@ export default function QuestionsPage() {
 
       setSaving(true);
       try {
-        await fetch('/api/admin/questions', {
+        const res = await adminFetch('/api/admin/questions', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -284,6 +296,11 @@ export default function QuestionsPage() {
             changeReason: form.changeReason.trim() || 'Admin update',
           }),
         });
+        if (res.status === 401) {
+          removeAdminToken();
+          router.push('/admin/login');
+          return;
+        }
         setModalMode(null);
         fetchQuestions();
       } catch (err) {
@@ -294,7 +311,7 @@ export default function QuestionsPage() {
     } else if (modalMode === 'add') {
       setSaving(true);
       try {
-        await fetch('/api/admin/questions', {
+        const res = await adminFetch('/api/admin/questions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -310,6 +327,11 @@ export default function QuestionsPage() {
             options: form.options.filter((o) => o.trim().length > 0),
           }),
         });
+        if (res.status === 401) {
+          removeAdminToken();
+          router.push('/admin/login');
+          return;
+        }
         setModalMode(null);
         fetchQuestions();
       } catch (err) {
