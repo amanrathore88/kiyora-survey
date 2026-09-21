@@ -226,7 +226,7 @@ export default function AdminDashboard() {
         {analytics && (
           <div className="mt-6 sm:mt-8 bg-white shadow-sm rounded-2xl p-4 sm:p-6 border border-gray-100">
             <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-4">
-              Purchase Intent Comparison (Q16 vs Q23)
+              Purchase Intent Comparison (Q17 vs Q24)
             </h2>
 
             {/* Shift Summary Cards */}
@@ -255,7 +255,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
               <div>
                 <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-3 sm:mb-4">
-                  Before Pricing (Q16 — Blind Concept)
+                  Before Pricing (Q17 — Blind Concept)
                 </h3>
                 <div className="space-y-3 sm:space-y-4">
                   {analytics.q16Distribution.map((item, i) => (
@@ -277,7 +277,7 @@ export default function AdminDashboard() {
 
               <div>
                 <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-3 sm:mb-4">
-                  After Pricing (Q23 — Final Kiyoki Proposition)
+                  After Pricing (Q24 — Final Kiyoki Proposition)
                 </h3>
                 <div className="space-y-3 sm:space-y-4">
                   {analytics.q23Distribution.map((item, i) => (

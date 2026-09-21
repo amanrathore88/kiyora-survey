@@ -16,16 +16,28 @@ export async function GET() {
   if (!auth.authorized) return auth.response;
 
   try {
-    // Find Q16 and Q23 question IDs
-    const [q16] = await db
+    // Find blind concept (Q17, fallback Q16) and final purchase intent (Q24, fallback Q23)
+    let [q16] = await db
       .select({ id: questions.id })
       .from(questions)
-      .where(eq(questions.questionNumber, "Q16"));
+      .where(eq(questions.questionNumber, "Q17"));
+    if (!q16) {
+      [q16] = await db
+        .select({ id: questions.id })
+        .from(questions)
+        .where(eq(questions.questionNumber, "Q16"));
+    }
 
-    const [q23] = await db
+    let [q23] = await db
       .select({ id: questions.id })
       .from(questions)
-      .where(eq(questions.questionNumber, "Q23"));
+      .where(eq(questions.questionNumber, "Q24"));
+    if (!q23) {
+      [q23] = await db
+        .select({ id: questions.id })
+        .from(questions)
+        .where(eq(questions.questionNumber, "Q23"));
+    }
 
     if (!q16 || !q23) {
       return NextResponse.json({

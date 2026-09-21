@@ -53,7 +53,7 @@ export default function SurveyPage() {
   const [language, setLanguage] = useState<Language>("en");
   const [sessionToken, setSessionToken] = useState<string>("");
   const [question, setQuestion] = useState<QuestionData | null>(null);
-  const [totalQuestions, setTotalQuestions] = useState(25);
+  const [totalQuestions, setTotalQuestions] = useState(26);
   const [currentIndex, setCurrentIndex] = useState(1);
   const [answer, setAnswer] = useState<AnswerState>({
     selectedOptionIds: [],
@@ -107,7 +107,7 @@ export default function SurveyPage() {
   const answersHistoryRef = useRef<Record<number, AnswerState>>({});
   const lastSectionKeyRef = useRef<string>("");
   const conceptShownRef = useRef<Set<string>>(new Set());
-  const totalQuestionsRef = useRef<number>(25);
+  const totalQuestionsRef = useRef<number>(26);
   const initialLoadDoneRef = useRef<boolean>(false);
 
   const t = UI_TRANSLATIONS[language];
@@ -264,7 +264,7 @@ export default function SurveyPage() {
 
         const list: QuestionData[] = data.questions || [];
         allQuestionsRef.current = list;
-        const totalQ = data.totalQuestions || list.length || 25;
+        const totalQ = data.totalQuestions || list.length || 26;
         totalQuestionsRef.current = totalQ;
         setTotalQuestions(totalQ);
 

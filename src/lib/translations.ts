@@ -437,6 +437,24 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
   },
   Q10: {
     en: {
+      questionText: "Considering the current severity of air pollution, do you feel the need to own an air purifier in the near future?",
+      options: {
+        Yes: "Yes",
+        No: "No",
+        Maybe: "Maybe",
+      },
+    },
+    hi: {
+      questionText: "वायु प्रदूषण की वर्तमान गंभीरता को देखते हुए, क्या आपको निकट भविष्य में एयर प्यूरीफायर रखने की आवश्यकता महसूस होती है?",
+      options: {
+        Yes: "हाँ",
+        No: "नहीं",
+        Maybe: "शायद",
+      },
+    },
+  },
+  Q11: {
+    en: {
       questionText: "What would be the main reasons for you to consider an air purifier? (Select up to 3)",
       options: {
         "High outdoor pollution / AQI": "High outdoor pollution / AQI",
@@ -463,7 +481,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q11: {
+  Q12: {
     en: {
       questionText: "If you would NOT consider buying an air purifier, what is the main reason?",
       options: {
@@ -487,7 +505,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q12: {
+  Q13: {
     en: {
       questionText: "Which THREE factors matter most when choosing an air purifier?",
       options: {
@@ -519,7 +537,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q13: {
+  Q14: {
     en: {
       questionText: "Before seeing any Kiyoki concept, what price would you personally consider reasonable for a good air purifier for your home?",
       options: {
@@ -543,7 +561,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q14: {
+  Q15: {
     en: {
       questionText: "Where would you be most comfortable buying an air purifier?",
       options: {
@@ -565,7 +583,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q15: {
+  Q16: {
     en: {
       questionText: "Which air-purifier brands, if any, would you naturally consider today?",
       options: {
@@ -591,7 +609,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q16: {
+  Q17: {
     en: {
       questionText: "Based only on the description above, how likely would you be to consider buying it at ₹11,999?",
       options: {
@@ -613,7 +631,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q17: {
+  Q18: {
     en: {
       questionText: "What is your FIRST reaction to the ₹11,999 price?",
       options: {
@@ -635,7 +653,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q18: {
+  Q19: {
     en: {
       questionText: "What would you need to believe or verify before paying ₹11,999? (Select up to 3)",
       options: {
@@ -665,7 +683,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q19: {
+  Q20: {
     en: {
       questionText: "After learning about the Japanese technology / design association, does your interest change?",
       options: {
@@ -687,7 +705,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q20: {
+  Q21: {
     en: {
       questionText: "What does 'Japanese technology' communicate to you most strongly? (Select up to 2)",
       options: {
@@ -715,7 +733,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q21: {
+  Q22: {
     en: {
       questionText: "Which positioning feels most relevant and credible to you?",
       options: {
@@ -739,7 +757,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q22: {
+  Q23: {
     en: {
       questionText: "How important is proof of the Japanese technology/design association before it influences your purchase?",
       options: {
@@ -761,7 +779,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q23: {
+  Q24: {
     en: {
       questionText: "Considering everything you have seen, how likely are you to buy / seriously consider Kiyoki at ₹11,999?",
       options: {
@@ -783,7 +801,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q24: {
+  Q25: {
     en: {
       questionText: "Which ONE thing would most increase your confidence to buy Kiyoki?",
       options: {
@@ -809,7 +827,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
   },
-  Q25: {
+  Q26: {
     en: {
       questionText: "In one sentence, what would make you choose Kiyoki over an established air-purifier brand?",
       options: {},

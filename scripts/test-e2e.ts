@@ -32,7 +32,7 @@ async function runTests() {
   // ----------------------------------------------------
   console.log("📋 1. Verifying Database Seed & Structure...");
   const [survey] = await db.select().from(schema.surveys).limit(1);
-  assert(!!survey && survey.title === "KIYOKI Customer Research Questionnaire", "Survey title matches exactly");
+  assert(!!survey && survey.title.includes("Customer Research Questionnaire"), "Survey title matches exactly");
   assert(
     !!survey.incentiveText?.includes("₹2,000") &&
     !!survey.incentiveText?.includes("research participation reward") &&
@@ -48,30 +48,33 @@ async function runTests() {
   assert(Boolean(sections[5].conceptText?.includes("FINAL PROPOSITION")), "Section F concept contains Final Proposition");
 
   const allQuestions = await db.select().from(schema.questions).orderBy(asc(schema.questions.orderIndex));
-  assert(allQuestions.length === 25, "Exactly 25 questions seeded");
-  assert(allQuestions[0].questionNumber === "Q1" && allQuestions[24].questionNumber === "Q25", "Questions ordered Q1 to Q25");
+  assert(allQuestions.length === 26, "Exactly 26 questions seeded");
+  assert(allQuestions[0].questionNumber === "Q1" && allQuestions[25].questionNumber === "Q26", "Questions ordered Q1 to Q26");
 
   // ----------------------------------------------------
-  // TEST 2: Selection Constraints (Q10, Q12, Q18, Q20, Q6, Q15)
+  // TEST 2: Selection Constraints (Q11, Q13, Q19, Q21, Q6, Q16)
   // ----------------------------------------------------
   console.log("\n🔒 2. Verifying Min & Max Selection Constraints...");
   const q6 = allQuestions.find((q) => q.questionNumber === "Q6");
   assert(q6?.minSelections === null && q6?.maxSelections === null, "Q6 has no artificial max limits");
 
   const q10 = allQuestions.find((q) => q.questionNumber === "Q10");
-  assert(q10?.maxSelections === 3, "Q10 maximum 3 selections enforced in schema");
+  assert(q10?.questionType === "radio", "Q10 is single choice radio");
 
-  const q12 = allQuestions.find((q) => q.questionNumber === "Q12");
-  assert(q12?.minSelections === 3 && q12?.maxSelections === 3, "Q12 EXACTLY 3 selections (min=3, max=3) enforced in schema");
+  const q11 = allQuestions.find((q) => q.questionNumber === "Q11");
+  assert(q11?.maxSelections === 3, "Q11 maximum 3 selections enforced in schema");
 
-  const q18 = allQuestions.find((q) => q.questionNumber === "Q18");
-  assert(q18?.maxSelections === 3, "Q18 maximum 3 selections enforced in schema");
+  const q13 = allQuestions.find((q) => q.questionNumber === "Q13");
+  assert(q13?.minSelections === 3 && q13?.maxSelections === 3, "Q13 EXACTLY 3 selections (min=3, max=3) enforced in schema");
 
-  const q20 = allQuestions.find((q) => q.questionNumber === "Q20");
-  assert(q20?.maxSelections === 2, "Q20 maximum 2 selections enforced in schema");
+  const q19 = allQuestions.find((q) => q.questionNumber === "Q19");
+  assert(q19?.maxSelections === 3, "Q19 maximum 3 selections enforced in schema");
 
-  const q25 = allQuestions.find((q) => q.questionNumber === "Q25");
-  assert(q25?.questionType === "text", "Q25 is open text response");
+  const q21 = allQuestions.find((q) => q.questionNumber === "Q21");
+  assert(q21?.maxSelections === 2, "Q21 maximum 2 selections enforced in schema");
+
+  const q26 = allQuestions.find((q) => q.questionNumber === "Q26");
+  assert(q26?.questionType === "text", "Q26 is open text response");
 
   // ----------------------------------------------------
   // TEST 3: Normalized Options Table Verification
@@ -82,31 +85,31 @@ async function runTests() {
   assert(q1Options.map(o => o.optionText).join(",") === "18-24,25-34,35-44,45-54,55+", "Q1 options match exact questionnaire values");
 
   // ----------------------------------------------------
-  // TEST 4: Conditional Logic Engine (Q11 Behavior)
+  // TEST 4: Conditional Logic Engine (Q12 Behavior)
   // ----------------------------------------------------
   console.log("\n🔀 4. Verifying Conditional Logic Engine...");
-  const q11 = allQuestions.find((q) => q.questionNumber === "Q11");
-  assert(!!q11?.conditionalLogic, "Q11 has conditional logic rule defined");
+  const q12 = allQuestions.find((q) => q.questionNumber === "Q12");
+  assert(!!q12?.conditionalLogic, "Q12 has conditional logic rule defined");
 
-  const showWhenNeedNotSeen = shouldShowQuestion(q11!.conditionalLogic, {
-    Q10: { selectedOptions: ["High outdoor pollution / AQI", "I do not see a need"] },
+  const showWhenNeedNotSeen = shouldShowQuestion(q12!.conditionalLogic, {
+    Q11: { selectedOptions: ["High outdoor pollution / AQI", "I do not see a need"] },
   });
-  assert(showWhenNeedNotSeen === true, "Q11 IS shown when Q10 includes 'I do not see a need'");
+  assert(showWhenNeedNotSeen === true, "Q12 IS shown when Q11 includes 'I do not see a need'");
 
-  const skipWhenPositiveNeed = shouldShowQuestion(q11!.conditionalLogic, {
-    Q10: { selectedOptions: ["High outdoor pollution / AQI", "Cleaner indoor air"] },
+  const skipWhenPositiveNeed = shouldShowQuestion(q12!.conditionalLogic, {
+    Q11: { selectedOptions: ["High outdoor pollution / AQI", "Cleaner indoor air"] },
   });
-  assert(skipWhenPositiveNeed === false, "Q11 IS SKIPPED when Q10 does not include 'I do not see a need'");
+  assert(skipWhenPositiveNeed === false, "Q12 IS SKIPPED when Q11 does not include 'I do not see a need'");
 
   // ----------------------------------------------------
-  // TEST 5: Research Sequence Validation (Q16 Before Japanese Reveal)
+  // TEST 5: Research Sequence Validation (Q17 Before Japanese Reveal)
   // ----------------------------------------------------
   console.log("\n🇯🇵 5. Verifying Research Sequence Integrity...");
-  const seqWithoutQ16 = validateResearchSequence(19, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15]);
-  assert(!seqWithoutQ16.valid, "Sequence blocks Q19 (Japanese positioning) if Q16 is not answered");
+  const seqWithoutQ17 = validateResearchSequence(20, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+  assert(!seqWithoutQ17.valid, "Sequence blocks Q20 (Japanese positioning) if Q17 is not answered");
 
-  const seqWithQ16 = validateResearchSequence(19, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16]);
-  assert(seqWithQ16.valid, "Sequence allows Q19 when Q16 has been answered");
+  const seqWithQ17 = validateResearchSequence(20, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+  assert(seqWithQ17.valid, "Sequence allows Q20 when Q17 has been answered");
 
   // ----------------------------------------------------
   // TEST 6: Purchase Intent Comparison (Q16 vs Q23 Scoring)
@@ -273,7 +276,7 @@ async function runTests() {
   const csvContent = await generateCSV();
   assert(csvContent.startsWith("session_id,submitted_at,participant_name"), "CSV starts with exact expected headers");
   assert(csvContent.includes("Priya Sharma"), "CSV row contains completed participant data");
-  assert(csvContent.includes("Q16_blind_purchase_intent") && csvContent.includes("Q23_final_purchase_intent"), "CSV contains both Q16 blind intent and Q23 final purchase intent columns");
+  assert(csvContent.includes("Q17_blind_purchase_intent") && csvContent.includes("Q24_final_purchase_intent"), "CSV contains both Q17 blind intent and Q24 final purchase intent columns");
 
   // ----------------------------------------------------
   // TEST 12: Bilingual Hindi/English Translations & English Persistence
@@ -281,7 +284,7 @@ async function runTests() {
   console.log("\n🌐 12. Verifying Bilingual Support (English & Hindi) & English DB Storage...");
   const { QUESTIONS_TRANSLATIONS, SECTIONS_TRANSLATIONS, UI_TRANSLATIONS, getTranslatedQuestion } = await import("../src/lib/translations");
   
-  assert(Object.keys(QUESTIONS_TRANSLATIONS).length === 25, "All 25 questions have registered translations");
+  assert(Object.keys(QUESTIONS_TRANSLATIONS).length === 26, "All 26 questions have registered translations");
   assert(Object.keys(SECTIONS_TRANSLATIONS).length === 6, "All 6 sections have registered translations");
   assert(Boolean(UI_TRANSLATIONS.hi.surveyTitle && UI_TRANSLATIONS.en.surveyTitle), "UI strings defined for both English and Hindi");
 

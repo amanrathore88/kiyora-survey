@@ -27,28 +27,29 @@ export const CSV_COLUMNS = [
   "Q7_location",
   "Q8_air_quality_concern",
   "Q9_own_purifier",
-  "Q10_reasons",
-  "Q10_other_text",
-  "Q11_not_consider_reason",
+  "Q10_future_need",
+  "Q11_reasons",
   "Q11_other_text",
-  "Q12_factors",
-  "Q13_price_expectation",
-  "Q14_purchase_channel",
-  "Q14_other_text",
-  "Q15_brands",
+  "Q12_not_consider_reason",
+  "Q12_other_text",
+  "Q13_factors",
+  "Q14_price_expectation",
+  "Q15_purchase_channel",
   "Q15_other_text",
-  "Q16_blind_purchase_intent",
-  "Q17_price_reaction",
-  "Q18_verification_needs",
-  "Q18_other_text",
-  "Q19_japanese_interest_change",
-  "Q20_japanese_perception",
-  "Q21_positioning_preference",
-  "Q22_proof_importance",
-  "Q23_final_purchase_intent",
-  "Q24_confidence_factor",
-  "Q24_other_text",
-  "Q25_open_response",
+  "Q16_brands",
+  "Q16_other_text",
+  "Q17_blind_purchase_intent",
+  "Q18_price_reaction",
+  "Q19_verification_needs",
+  "Q19_other_text",
+  "Q20_japanese_interest_change",
+  "Q21_japanese_perception",
+  "Q22_positioning_preference",
+  "Q23_proof_importance",
+  "Q24_final_purchase_intent",
+  "Q25_confidence_factor",
+  "Q25_other_text",
+  "Q26_open_response",
   "is_archived",
 ] as const;
 
@@ -86,12 +87,12 @@ function parseQuestionIndex(
     const match = trimmed.match(/^Q?(\d+)/i);
     if (match) {
       const num = parseInt(match[1], 10);
-      if (num >= 1 && num <= 25) {
+      if (num >= 1 && num <= 26) {
         return num;
       }
     }
   }
-  if (typeof orderIndex === "number" && orderIndex >= 1 && orderIndex <= 25) {
+  if (typeof orderIndex === "number" && orderIndex >= 1 && orderIndex <= 26) {
     return orderIndex;
   }
   return null;
@@ -159,7 +160,7 @@ export async function generateCSV(options?: CSVExportOptions): Promise<string> {
 
     // Organize answers by question index (1..25)
     const answersMap = new Map<number, QuestionAnswerData>();
-    for (let i = 1; i <= 25; i++) {
+    for (let i = 1; i <= 26; i++) {
       answersMap.set(i, { options: [], otherTexts: [], freeTexts: [] });
     }
 
@@ -179,7 +180,7 @@ export async function generateCSV(options?: CSVExportOptions): Promise<string> {
         record.question?.orderIndex
       );
 
-      if (!qIndex || qIndex < 1 || qIndex > 25) {
+      if (!qIndex || qIndex < 1 || qIndex > 26) {
         continue;
       }
 
@@ -306,28 +307,29 @@ export async function generateCSV(options?: CSVExportOptions): Promise<string> {
       getSingleAnswer(7),
       getSingleAnswer(8),
       getSingleAnswer(9),
-      getMultiAnswer(10),
-      getOtherText(10),
-      getSingleAnswer(11),
+      getSingleAnswer(10),
+      getMultiAnswer(11),
       getOtherText(11),
-      getMultiAnswer(12),
-      getSingleAnswer(13),
+      getSingleAnswer(12),
+      getOtherText(12),
+      getMultiAnswer(13),
       getSingleAnswer(14),
-      getOtherText(14),
-      getMultiAnswer(15),
+      getSingleAnswer(15),
       getOtherText(15),
-      getSingleAnswer(16),
+      getMultiAnswer(16),
+      getOtherText(16),
       getSingleAnswer(17),
-      getMultiAnswer(18),
-      getOtherText(18),
-      getSingleAnswer(19),
-      getMultiAnswer(20),
-      getSingleAnswer(21),
+      getSingleAnswer(18),
+      getMultiAnswer(19),
+      getOtherText(19),
+      getSingleAnswer(20),
+      getMultiAnswer(21),
       getSingleAnswer(22),
       getSingleAnswer(23),
       getSingleAnswer(24),
-      getOtherText(24),
-      getOpenResponse(25),
+      getSingleAnswer(25),
+      getOtherText(25),
+      getOpenResponse(26),
       isArchived ? "true" : "false",
     ];
 

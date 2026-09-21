@@ -59,12 +59,12 @@ export function validateResearchSequence(
 ): { valid: boolean; error?: string } {
   // Q16 is order_index 16, Q19 starts at order_index 19
   // Concept 2 (Japanese tech) is shown before Q19
-  if (targetQuestionOrder >= 19) {
-    if (!answeredQuestionOrders.includes(16)) {
+  if (targetQuestionOrder >= 20) {
+    if (!answeredQuestionOrders.includes(17)) {
       return {
         valid: false,
         error:
-          "Q16 must be answered before the Japanese technology positioning is revealed.",
+          "Q17 must be answered before the Japanese technology positioning is revealed.",
       };
     }
   }

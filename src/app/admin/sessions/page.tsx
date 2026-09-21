@@ -275,7 +275,7 @@ export default function SessionsPage() {
                           {new Date(s.lastActivityAt).toLocaleString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {s.currentQuestionIndex} / 25 Questions
+                          {s.currentQuestionIndex} / 26 Questions
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2">
@@ -335,7 +335,7 @@ export default function SessionsPage() {
 
                     <div className="flex items-center justify-between text-xs text-gray-600 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
                       <span>Progress:</span>
-                      <strong className="text-gray-900 font-semibold">{s.currentQuestionIndex} / 25 Questions</strong>
+                      <strong className="text-gray-900 font-semibold">{s.currentQuestionIndex} / 26 Questions</strong>
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-gray-500">

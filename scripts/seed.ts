@@ -257,10 +257,19 @@ async function seed() {
       questionType: "radio",
       options: ["Yes", "No", "Used one previously"],
     },
-    {
+        {
       sectionId: sec["B"],
       questionNumber: "Q10",
       orderIndex: 10,
+      questionText:
+        "Considering the current severity of air pollution, do you feel the need to own an air purifier in the near future?",
+      questionType: "radio",
+      options: ["Yes", "No", "Maybe"],
+    },
+{
+      sectionId: sec["B"],
+      questionNumber: "Q11",
+      orderIndex: 11,
       questionText:
         "What would be the main reasons for you to consider an air purifier? (Select up to 3)",
       questionType: "checkbox",
@@ -279,8 +288,8 @@ async function seed() {
     },
     {
       sectionId: sec["B"],
-      questionNumber: "Q11",
-      orderIndex: 11,
+      questionNumber: "Q12",
+      orderIndex: 12,
       questionText:
         "If you would NOT consider buying an air purifier, what is the main reason?",
       questionType: "radio",
@@ -289,7 +298,7 @@ async function seed() {
         type: "show_if",
         conditions: [
           {
-            questionNumber: "Q10",
+            questionNumber: "Q11",
             operator: "includes_option",
             value: "I do not see a need",
           },
@@ -311,8 +320,8 @@ async function seed() {
     // === Section C: Purchase Decision & Price ===
     {
       sectionId: sec["C"],
-      questionNumber: "Q12",
-      orderIndex: 12,
+      questionNumber: "Q13",
+      orderIndex: 13,
       questionText:
         "Which THREE factors matter most when choosing an air purifier?",
       questionType: "checkbox",
@@ -333,8 +342,8 @@ async function seed() {
     },
     {
       sectionId: sec["C"],
-      questionNumber: "Q13",
-      orderIndex: 13,
+      questionNumber: "Q14",
+      orderIndex: 14,
       questionText:
         "Before seeing any Kiyoki concept, what price would you personally consider reasonable for a good air purifier for your home?",
       questionType: "radio",
@@ -349,8 +358,8 @@ async function seed() {
     },
     {
       sectionId: sec["C"],
-      questionNumber: "Q14",
-      orderIndex: 14,
+      questionNumber: "Q15",
+      orderIndex: 15,
       questionText:
         "Where would you be most comfortable buying an air purifier?",
       questionType: "radio",
@@ -365,8 +374,8 @@ async function seed() {
     },
     {
       sectionId: sec["C"],
-      questionNumber: "Q15",
-      orderIndex: 15,
+      questionNumber: "Q16",
+      orderIndex: 16,
       questionText:
         "Which air-purifier brands, if any, would you naturally consider today?",
       questionType: "checkbox",
@@ -385,8 +394,8 @@ async function seed() {
     // === Section D: Blind Kiyoki Concept Test ===
     {
       sectionId: sec["D"],
-      questionNumber: "Q16",
-      orderIndex: 16,
+      questionNumber: "Q17",
+      orderIndex: 17,
       questionText:
         "Based only on the description above, how likely would you be to consider buying it at ₹11,999?",
       questionType: "radio",
@@ -402,8 +411,8 @@ async function seed() {
     },
     {
       sectionId: sec["D"],
-      questionNumber: "Q17",
-      orderIndex: 17,
+      questionNumber: "Q18",
+      orderIndex: 18,
       questionText: "What is your FIRST reaction to the ₹11,999 price?",
       questionType: "radio",
       options: [
@@ -416,8 +425,8 @@ async function seed() {
     },
     {
       sectionId: sec["D"],
-      questionNumber: "Q18",
-      orderIndex: 18,
+      questionNumber: "Q19",
+      orderIndex: 19,
       questionText:
         "What would you need to believe or verify before paying ₹11,999? (Select up to 3)",
       questionType: "checkbox",
@@ -439,8 +448,8 @@ async function seed() {
     // === Section E: Japanese Technology & Brand Positioning ===
     {
       sectionId: sec["E"],
-      questionNumber: "Q19",
-      orderIndex: 19,
+      questionNumber: "Q20",
+      orderIndex: 20,
       questionText:
         "After learning about the Japanese technology / design association, does your interest change?",
       questionType: "radio",
@@ -454,8 +463,8 @@ async function seed() {
     },
     {
       sectionId: sec["E"],
-      questionNumber: "Q20",
-      orderIndex: 20,
+      questionNumber: "Q21",
+      orderIndex: 21,
       questionText:
         "What does 'Japanese technology' communicate to you most strongly? (Select up to 2)",
       questionType: "checkbox",
@@ -473,8 +482,8 @@ async function seed() {
     },
     {
       sectionId: sec["E"],
-      questionNumber: "Q21",
-      orderIndex: 21,
+      questionNumber: "Q22",
+      orderIndex: 22,
       questionText:
         "Which positioning feels most relevant and credible to you?",
       questionType: "radio",
@@ -489,8 +498,8 @@ async function seed() {
     },
     {
       sectionId: sec["E"],
-      questionNumber: "Q22",
-      orderIndex: 22,
+      questionNumber: "Q23",
+      orderIndex: 23,
       questionText:
         "How important is proof of the Japanese technology/design association before it influences your purchase?",
       questionType: "radio",
@@ -506,8 +515,8 @@ async function seed() {
     // === Section F: Final Kiyoki Purchase Test ===
     {
       sectionId: sec["F"],
-      questionNumber: "Q23",
-      orderIndex: 23,
+      questionNumber: "Q24",
+      orderIndex: 24,
       questionText:
         "Considering everything you have seen, how likely are you to buy / seriously consider Kiyoki at ₹11,999?",
       questionType: "radio",
@@ -521,8 +530,8 @@ async function seed() {
     },
     {
       sectionId: sec["F"],
-      questionNumber: "Q24",
-      orderIndex: 24,
+      questionNumber: "Q25",
+      orderIndex: 25,
       questionText:
         "Which ONE thing would most increase your confidence to buy Kiyoki?",
       questionType: "radio",
@@ -539,8 +548,8 @@ async function seed() {
     },
     {
       sectionId: sec["F"],
-      questionNumber: "Q25",
-      orderIndex: 25,
+      questionNumber: "Q26",
+      orderIndex: 26,
       questionText:
         "In one sentence, what would make you choose Kiyoki over an established air-purifier brand?",
       questionType: "text",
