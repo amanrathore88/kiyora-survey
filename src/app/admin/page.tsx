@@ -130,7 +130,7 @@ export default function AdminDashboard() {
       const link = document.createElement('a');
       link.href = url;
       const timestamp = new Date().toISOString().split('T')[0];
-      link.download = `kiyora-survey-responses-${timestamp}.csv`;
+      link.download = `kiyoki-survey-responses-${timestamp}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -277,7 +277,7 @@ export default function AdminDashboard() {
 
               <div>
                 <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-3 sm:mb-4">
-                  After Pricing (Q23 — Final Kiyora Proposition)
+                  After Pricing (Q23 — Final Kiyoki Proposition)
                 </h3>
                 <div className="space-y-3 sm:space-y-4">
                   {analytics.q23Distribution.map((item, i) => (

@@ -88,7 +88,7 @@ export default function SurveyPage() {
 
   const handleLanguageChange = (newLang: Language) => {
     setLanguage(newLang);
-    sessionStorage.setItem("kiyora_lang", newLang);
+    sessionStorage.setItem("kiyoki_lang", newLang);
   };
 
   // Build client answers map for instant conditional logic checking
@@ -195,7 +195,7 @@ export default function SurveyPage() {
     async (index: number, fetchDirection: number = 1, shouldShowLoading = true) => {
       setError("");
       const currentToken =
-        sessionToken || sessionStorage.getItem("kiyora_session");
+        sessionToken || sessionStorage.getItem("kiyoki_session") || sessionStorage.getItem("kiyora_session");
       if (!currentToken) {
         router.push("/");
         return;
@@ -262,7 +262,9 @@ export default function SurveyPage() {
 
     async function init() {
       // 1. Instant pre-hydration from sessionStorage (0ms first paint!)
-      const storedQuestions = sessionStorage.getItem("kiyora_questions");
+      const storedQuestions =
+        sessionStorage.getItem("kiyoki_questions") ||
+        sessionStorage.getItem("kiyora_questions");
       if (storedQuestions) {
         try {
           const parsed = JSON.parse(storedQuestions);
@@ -300,11 +302,11 @@ export default function SurveyPage() {
           }
 
           // Valid session for resume
-          sessionStorage.setItem("kiyora_session", resumeToken);
+          sessionStorage.setItem("kiyoki_session", resumeToken);
           setSessionToken(resumeToken);
           if (data.language === "hi" || data.language === "en") {
             setLanguage(data.language);
-            sessionStorage.setItem("kiyora_lang", data.language);
+            sessionStorage.setItem("kiyoki_lang", data.language);
           }
 
           const resumeIdx = data.currentQuestionIndex || 1;
@@ -325,12 +327,15 @@ export default function SurveyPage() {
       }
 
       // 3. Standard flow from home page
-      const storedLang = sessionStorage.getItem("kiyora_lang") as Language | null;
+      const storedLang = (sessionStorage.getItem("kiyoki_lang") ||
+        sessionStorage.getItem("kiyora_lang")) as Language | null;
       if (storedLang === "hi" || storedLang === "en") {
         setLanguage(storedLang);
       }
 
-      const storedToken = sessionStorage.getItem("kiyora_session");
+      const storedToken =
+        sessionStorage.getItem("kiyoki_session") ||
+        sessionStorage.getItem("kiyora_session");
       if (!storedToken) {
         router.push("/");
         return;
@@ -392,7 +397,9 @@ export default function SurveyPage() {
     setError("");
 
     const currentToken =
-      sessionToken || sessionStorage.getItem("kiyora_session");
+      sessionToken ||
+      sessionStorage.getItem("kiyoki_session") ||
+      sessionStorage.getItem("kiyora_session");
 
     // 1. Immediately record answer in local history
     answersHistoryRef.current[question.id] = { ...answer };
@@ -445,7 +452,9 @@ export default function SurveyPage() {
     setError("");
 
     const currentToken =
-      sessionToken || sessionStorage.getItem("kiyora_session");
+      sessionToken ||
+      sessionStorage.getItem("kiyoki_session") ||
+      sessionStorage.getItem("kiyora_session");
 
     // Clear local answer history for this question
     delete answersHistoryRef.current[question.id];
@@ -513,7 +522,9 @@ export default function SurveyPage() {
   const handlePauseClick = async () => {
     setShowPauseModal(true);
     const currentToken =
-      sessionToken || sessionStorage.getItem("kiyora_session");
+      sessionToken ||
+      sessionStorage.getItem("kiyoki_session") ||
+      sessionStorage.getItem("kiyora_session");
     if (currentToken && currentIndex > 0) {
       try {
         await fetch("/api/survey/pause", {
@@ -532,7 +543,10 @@ export default function SurveyPage() {
 
   const handleCopyResumeLink = async () => {
     const currentToken =
-      sessionToken || sessionStorage.getItem("kiyora_session") || "";
+      sessionToken ||
+      sessionStorage.getItem("kiyoki_session") ||
+      sessionStorage.getItem("kiyora_session") ||
+      "";
     const resumeUrl = `${window.location.origin}/survey?resume=${encodeURIComponent(
       currentToken
     )}`;
@@ -558,7 +572,9 @@ export default function SurveyPage() {
 
   const handleSaveAndExit = async () => {
     const currentToken =
-      sessionToken || sessionStorage.getItem("kiyora_session");
+      sessionToken ||
+      sessionStorage.getItem("kiyoki_session") ||
+      sessionStorage.getItem("kiyora_session");
     if (currentToken) {
       try {
         await fetch("/api/survey/pause", {
@@ -579,7 +595,9 @@ export default function SurveyPage() {
   // Abandon survey handler
   const handleAbandonConfirm = async () => {
     const currentToken =
-      sessionToken || sessionStorage.getItem("kiyora_session");
+      sessionToken ||
+      sessionStorage.getItem("kiyoki_session") ||
+      sessionStorage.getItem("kiyora_session");
     setAbandonSaving(true);
     try {
       if (currentToken) {
@@ -592,6 +610,7 @@ export default function SurveyPage() {
           }),
         });
       }
+      sessionStorage.removeItem("kiyoki_session");
       sessionStorage.removeItem("kiyora_session");
       setShowAbandonModal(false);
       setIsAbandoned(true);
@@ -623,7 +642,13 @@ export default function SurveyPage() {
       )
     : null;
 
-  const currentToken = sessionToken || (typeof window !== "undefined" ? sessionStorage.getItem("kiyora_session") || "" : "");
+  const currentToken =
+    sessionToken ||
+    (typeof window !== "undefined"
+      ? sessionStorage.getItem("kiyoki_session") ||
+        sessionStorage.getItem("kiyora_session") ||
+        ""
+      : "");
   const resumeLinkUrl = typeof window !== "undefined" ? `${window.location.origin}/survey?resume=${currentToken}` : "";
 
   // 1. Invalid / Expired Session View

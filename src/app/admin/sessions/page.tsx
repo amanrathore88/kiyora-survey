@@ -75,7 +75,7 @@ export default function SessionsPage() {
       const link = document.createElement('a');
       link.href = url;
       const timestamp = new Date().toISOString().split('T')[0];
-      link.download = `kiyora-survey-responses-${timestamp}.csv`;
+      link.download = `kiyoki-survey-responses-${timestamp}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

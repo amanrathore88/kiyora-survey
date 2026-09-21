@@ -1,6 +1,6 @@
-# KIYORA Customer Research Survey System
+# KIYOKI Customer Research Survey System
 
-A web-based survey engine and research administration platform designed specifically for the **KIYORA India Air Purifier Concept & Price Validation** study, developed for **Kiyoki Private Limited**.
+A web-based survey engine and research administration platform designed specifically for the **KIYOKI India Air Purifier Concept & Price Validation** study, developed for **Kiyoki Private Limited**.
 
 ---
 

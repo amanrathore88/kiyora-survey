@@ -164,7 +164,16 @@ export async function ensureDatabaseReady(): Promise<void> {
           console.log("Database has 0 questions. Auto-seeding initial 25 questions and admin...");
           await autoSeed();
         } else {
-          // Database already has questions — keep everything 100% intact!
+          // Database already has questions — keep everything intact and migrate any 'Kiyora' to 'Kiyoki'
+          try {
+            await client.executeMultiple(`
+              UPDATE surveys SET title = REPLACE(REPLACE(title, 'KIYORA', 'KIYOKI'), 'Kiyora', 'Kiyoki'), description = REPLACE(REPLACE(description, 'KIYORA', 'KIYOKI'), 'Kiyora', 'Kiyoki');
+              UPDATE sections SET section_title = REPLACE(REPLACE(section_title, 'KIYORA', 'KIYOKI'), 'Kiyora', 'Kiyoki'), concept_text = REPLACE(REPLACE(concept_text, 'KIYORA', 'KIYOKI'), 'Kiyora', 'Kiyoki');
+              UPDATE questions SET question_text = REPLACE(REPLACE(question_text, 'KIYORA', 'KIYOKI'), 'Kiyora', 'Kiyoki');
+            `);
+          } catch (migrateErr) {
+            console.warn("Kiyoki name migration check:", migrateErr);
+          }
         }
         isDbReady = true;
       } catch (err) {
@@ -183,7 +192,7 @@ async function autoSeed() {
   const [survey] = await db
     .insert(schema.surveys)
     .values({
-      title: "KIYORA Customer Research Questionnaire",
+      title: "KIYOKI Customer Research Questionnaire",
       description: "India Air Purifier Concept & Price Validation",
       incentiveText:
         "Participants who successfully complete the full research survey/session will receive a coupon worth ₹2,000. The coupon is a research participation reward and should not be presented as a discount on the air purifier.",
@@ -200,7 +209,7 @@ async function autoSeed() {
     { sectionKey: "C", sectionTitle: "Purchase Decision & Price", orderIndex: 3, conceptText: null },
     {
       sectionKey: "D",
-      sectionTitle: "Blind Kiyora Concept Test",
+      sectionTitle: "Blind Kiyoki Concept Test",
       orderIndex: 4,
       conceptText:
         'CONCEPT 1: "A premium air purifier designed specifically for India\'s high-pollution conditions, with strong air-cleaning performance, HEPA filtration, UV treatment and a premium minimalist design. Expected price: ₹11,999."',
@@ -210,14 +219,14 @@ async function autoSeed() {
       sectionTitle: "Japanese Technology & Brand Positioning",
       orderIndex: 5,
       conceptText:
-        'CONCEPT 2: "Kiyora is being developed for Indian pollution conditions and incorporates Japanese technology / design thinking, while targeting a price of approximately ₹11,999."',
+        'CONCEPT 2: "Kiyoki is being developed for Indian pollution conditions and incorporates Japanese technology / design thinking, while targeting a price of approximately ₹11,999."',
     },
     {
       sectionKey: "F",
-      sectionTitle: "Final Kiyora Purchase Test",
+      sectionTitle: "Final Kiyoki Purchase Test",
       orderIndex: 6,
       conceptText:
-        'FINAL PROPOSITION: "KIYORA — an air purifier built for India\'s pollution conditions, incorporating Japanese technology/design thinking, strong CADR, HEPA filtration and UV treatment, with premium design at approximately ₹11,999."',
+        'FINAL PROPOSITION: "KIYOKI — an air purifier built for India\'s pollution conditions, incorporating Japanese technology/design thinking, strong CADR, HEPA filtration and UV treatment, with premium design at approximately ₹11,999."',
     },
   ];
 
@@ -254,7 +263,7 @@ async function autoSeed() {
     { sectionId: sec["B"], questionNumber: "Q10", orderIndex: 10, questionText: "What would be the main reasons for you to consider an air purifier? (Select up to 3)", questionType: "checkbox" as const, maxSelections: 3, hasOtherOption: true, options: ["High outdoor pollution / AQI", "Cleaner indoor air", "Children's health", "Elderly family members", "Dust / allergy concerns", "Smoke / odour", "General preventive health / wellness", "I do not see a need"] },
     { sectionId: sec["B"], questionNumber: "Q11", orderIndex: 11, questionText: "If you would NOT consider buying an air purifier, what is the main reason?", questionType: "radio" as const, hasOtherOption: true, conditionalLogic: '{"type":"show_if","conditions":[{"questionNumber":"Q10","operator":"includes_option","value":"I do not see a need"}],"fallback":"skip"}', researcherNote: "If respondent is clearly not interested, continue with profile/brand perception questions as useful; do not force purchase-intent answers.", options: ["Too expensive", "Do not think I need one", "Do not know enough about air purifiers", "Do not trust their effectiveness", "Filter / maintenance cost", "Already have one"] },
     { sectionId: sec["C"], questionNumber: "Q12", orderIndex: 12, questionText: "Which THREE factors matter most when choosing an air purifier?", questionType: "checkbox" as const, minSelections: 3, maxSelections: 3, options: ["Air-cleaning performance / CADR", "Price", "Filter quality / HEPA filtration", "Annual filter & maintenance cost", "Brand trust", "Low noise", "Design / appearance", "Room coverage", "Air-quality display / smart features", "Warranty & after-sales service"] },
-    { sectionId: sec["C"], questionNumber: "Q13", orderIndex: 13, questionText: "Before seeing any Kiyora concept, what price would you personally consider reasonable for a good air purifier for your home?", questionType: "radio" as const, options: ["Below ₹8,000", "₹8,000-9,999", "₹10,000-11,999", "₹12,000-14,999", "₹15,000-19,999", "₹20,000+"] },
+    { sectionId: sec["C"], questionNumber: "Q13", orderIndex: 13, questionText: "Before seeing any Kiyoki concept, what price would you personally consider reasonable for a good air purifier for your home?", questionType: "radio" as const, options: ["Below ₹8,000", "₹8,000-9,999", "₹10,000-11,999", "₹12,000-14,999", "₹15,000-19,999", "₹20,000+"] },
     { sectionId: sec["C"], questionNumber: "Q14", orderIndex: 14, questionText: "Where would you be most comfortable buying an air purifier?", questionType: "radio" as const, hasOtherOption: true, options: ["Amazon", "Flipkart", "Brand website", "Electronics / retail store", "Through a trusted dealer"] },
     { sectionId: sec["C"], questionNumber: "Q15", orderIndex: 15, questionText: "Which air-purifier brands, if any, would you naturally consider today?", questionType: "checkbox" as const, hasOtherOption: true, options: ["Dyson", "Philips", "Xiaomi", "Qubo", "Coway", "Honeywell", "I don't know / no preference"] },
     { sectionId: sec["D"], questionNumber: "Q16", orderIndex: 16, questionText: "Based only on the description above, how likely would you be to consider buying it at ₹11,999?", questionType: "radio" as const, researcherNote: "Record purchase intent at Q16 before revealing Japanese technology, then compare it with Q23. This helps measure whether the Japanese-technology + India-pollution positioning actually increases consideration. Do not coach respondents toward a positive answer.", options: ["Definitely would consider", "Probably would consider", "Not sure", "Probably would not consider", "Definitely would not consider"] },
@@ -264,9 +273,9 @@ async function autoSeed() {
     { sectionId: sec["E"], questionNumber: "Q20", orderIndex: 20, questionText: "What does 'Japanese technology' communicate to you most strongly? (Select up to 2)", questionType: "checkbox" as const, maxSelections: 2, options: ["Better quality", "Reliability / durability", "Advanced technology", "Premium design", "Better safety / precision", "Higher price", "It does not make a difference to me", "I would need proof of the Japanese association"] },
     { sectionId: sec["E"], questionNumber: "Q21", orderIndex: 21, questionText: "Which positioning feels most relevant and credible to you?", questionType: "radio" as const, options: ["Made for Indian pollution", "Japanese technology / design", "Strong performance at an accessible price", "Premium minimalist design", "A combination of Indian-market engineering + Japanese technology", "None of these"] },
     { sectionId: sec["E"], questionNumber: "Q22", orderIndex: 22, questionText: "How important is proof of the Japanese technology/design association before it influences your purchase?", questionType: "radio" as const, options: ["Essential - I would want clear evidence", "Important", "Nice to have", "Not important", "Japanese association does not affect my decision"] },
-    { sectionId: sec["F"], questionNumber: "Q23", orderIndex: 23, questionText: "Considering everything you have seen, how likely are you to buy / seriously consider Kiyora at ₹11,999?", questionType: "radio" as const, options: ["Definitely yes", "Probably yes", "Not sure", "Probably no", "Definitely no"] },
-    { sectionId: sec["F"], questionNumber: "Q24", orderIndex: 24, questionText: "Which ONE thing would most increase your confidence to buy Kiyora?", questionType: "radio" as const, hasOtherOption: true, options: ["Independent performance test results", "Clear Japanese technology/design partnership proof", "Lower filter replacement cost / longer filter life", "Strong warranty and service network", "Customer reviews / recommendations", "IIT / credible technical institution association, if officially validated and communicated", "Introductory offer / financing"] },
-    { sectionId: sec["F"], questionNumber: "Q25", orderIndex: 25, questionText: "In one sentence, what would make you choose Kiyora over an established air-purifier brand?", questionType: "text" as const, options: [] },
+    { sectionId: sec["F"], questionNumber: "Q23", orderIndex: 23, questionText: "Considering everything you have seen, how likely are you to buy / seriously consider Kiyoki at ₹11,999?", questionType: "radio" as const, options: ["Definitely yes", "Probably yes", "Not sure", "Probably no", "Definitely no"] },
+    { sectionId: sec["F"], questionNumber: "Q24", orderIndex: 24, questionText: "Which ONE thing would most increase your confidence to buy Kiyoki?", questionType: "radio" as const, hasOtherOption: true, options: ["Independent performance test results", "Clear Japanese technology/design partnership proof", "Lower filter replacement cost / longer filter life", "Strong warranty and service network", "Customer reviews / recommendations", "IIT / credible technical institution association, if officially validated and communicated", "Introductory offer / financing"] },
+    { sectionId: sec["F"], questionNumber: "Q25", orderIndex: 25, questionText: "In one sentence, what would make you choose Kiyoki over an established air-purifier brand?", questionType: "text" as const, options: [] },
   ];
 
   for (const q of questionsData) {

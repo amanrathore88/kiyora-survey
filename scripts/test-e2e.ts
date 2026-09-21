@@ -32,7 +32,7 @@ async function runTests() {
   // ----------------------------------------------------
   console.log("📋 1. Verifying Database Seed & Structure...");
   const [survey] = await db.select().from(schema.surveys).limit(1);
-  assert(!!survey && survey.title === "KIYORA Customer Research Questionnaire", "Survey title matches exactly");
+  assert(!!survey && survey.title === "KIYOKI Customer Research Questionnaire", "Survey title matches exactly");
   assert(
     !!survey.incentiveText?.includes("₹2,000") &&
     !!survey.incentiveText?.includes("research participation reward") &&

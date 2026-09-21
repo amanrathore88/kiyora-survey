@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
     const timestamp = new Date().toISOString().split("T")[0];
     const filterSuffix = filter !== "all" ? `-${filter}` : "";
-    const filename = `kiyora-survey-responses${filterSuffix}-${timestamp}.csv`;
+    const filename = `kiyoki-survey-responses${filterSuffix}-${timestamp}.csv`;
 
     return new NextResponse(csv, {
       status: 200,

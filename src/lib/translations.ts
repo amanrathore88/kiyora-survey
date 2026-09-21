@@ -12,11 +12,11 @@ export interface SectionTranslation {
 
 export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
   en: {
-    surveyTitle: "KIYORA",
+    surveyTitle: "KIYOKI",
     surveySubtitle: "Customer Research Questionnaire",
     studySubtitle: "India Air Purifier Concept & Price Validation",
     companyName: "Kiyoki Private Limited",
-    welcomeHeading: "Welcome to Kiyora Customer Research",
+    welcomeHeading: "Welcome to Kiyoki Customer Research",
     welcomeDescription:
       "We are researching consumer attitudes toward indoor air quality, health, and air purification solutions tailored for India's high-pollution conditions.",
     welcomeIncentive:
@@ -50,7 +50,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     selectUpTo: "Select up to",
     optionsWord: "options",
     thankYouTitle: "Thank You for Participating!",
-    thankYouSubtitle: "Your valuable insights will help shape Kiyora.",
+    thankYouSubtitle: "Your valuable insights will help shape Kiyoki.",
     incentiveRewardBox:
       "As a research participation reward, you are eligible to receive a coupon worth ₹2,000.",
     contactFormHeading: "Claim Your Participation Reward",
@@ -85,7 +85,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     abandoning: "Abandoning...",
     abandonedTitle: "Survey Abandoned",
     abandonedMessage:
-      "You have exited the Kiyora customer research survey. Your session has been marked as abandoned.",
+      "You have exited the Kiyoki customer research survey. Your session has been marked as abandoned.",
     returnHome: "Return to Home",
     sessionResumedToast: "Resumed survey from Question",
     invalidSessionTitle: "Session Unavailable",
@@ -101,11 +101,11 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     skipQuestionTooltip: "Skip this question and proceed to next",
   },
   hi: {
-    surveyTitle: "कियोरा (KIYORA)",
+    surveyTitle: "कियोकी (KIYOKI)",
     surveySubtitle: "उपभोक्ता अनुसंधान प्रश्नावली",
     studySubtitle: "भारत एयर प्यूरीफायर अवधारणा एवं मूल्य सत्यापन",
     companyName: "कियोकी प्राइवेट लिमिटेड (Kiyoki Private Limited)",
-    welcomeHeading: "कियोरा उपभोक्ता अनुसंधान में आपका स्वागत है",
+    welcomeHeading: "कियोकी उपभोक्ता अनुसंधान में आपका स्वागत है",
     welcomeDescription:
       "हम भारत की उच्च प्रदूषण स्थितियों के अनुकूल इनडोर वायु गुणवत्ता, स्वास्थ्य और एयर प्यूरीफायर समाधानों के प्रति उपभोक्ता प्राथमिकताओं पर शोध कर रहे हैं।",
     welcomeIncentive:
@@ -139,7 +139,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     selectUpTo: "अधिकतम विकल्प चुनें:",
     optionsWord: "विकल्प",
     thankYouTitle: "भाग लेने के लिए धन्यवाद!",
-    thankYouSubtitle: "आपके महत्वपूर्ण विचार कियोरा को बेहतर बनाने में मदद करेंगे।",
+    thankYouSubtitle: "आपके महत्वपूर्ण विचार कियोकी को बेहतर बनाने में मदद करेंगे।",
     incentiveRewardBox:
       "शोध भागीदारी पुरस्कार के रूप में, आप ₹2,000 मूल्य का कूपन प्राप्त करने के पात्र हैं।",
     contactFormHeading: "अपना भागीदारी पुरस्कार प्राप्त करें",
@@ -174,7 +174,7 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     abandoning: "छोड़ा जा रहा है...",
     abandonedTitle: "सर्वेक्षण छोड़ दिया गया",
     abandonedMessage:
-      "आपने कियोरा उपभोक्ता अनुसंधान सर्वेक्षण छोड़ दिया है। आपका सत्र समाप्त हो चुका है।",
+      "आपने कियोकी उपभोक्ता अनुसंधान सर्वेक्षण छोड़ दिया है। आपका सत्र समाप्त हो चुका है।",
     returnHome: "होम पेज पर लौटें",
     sessionResumedToast: "प्रश्न से सर्वेक्षण पुनः शुरू हुआ",
     invalidSessionTitle: "सत्र अनुपलब्ध",
@@ -206,12 +206,12 @@ export const SECTIONS_TRANSLATIONS: Record<string, Record<Language, SectionTrans
   },
   D: {
     en: {
-      title: "Blind Kiyora Concept Test",
+      title: "Blind Kiyoki Concept Test",
       conceptText:
         'CONCEPT 1: "A premium air purifier designed specifically for India\'s high-pollution conditions, with strong air-cleaning performance, HEPA filtration, UV treatment and a premium minimalist design. Expected price: ₹11,999."',
     },
     hi: {
-      title: "ब्लाइंड कियोरा अवधारणा परीक्षण",
+      title: "ब्लाइंड कियोकी अवधारणा परीक्षण",
       conceptText:
         'अवधारणा 1: "एक प्रीमियम एयर प्यूरीफायर जिसे विशेष रूप से भारत की अत्यधिक प्रदूषण स्थितियों के लिए डिज़ाइन किया गया है, जिसमें शक्तिशाली वायु-सफाई प्रदर्शन, हेपा (HEPA) निस्पंदन, यूवी (UV) उपचार और एक प्रीमियम न्यूनतम (मिनिमलिस्ट) डिज़ाइन शामिल है। अनुमानित कीमत: ₹11,999।"',
     },
@@ -220,24 +220,24 @@ export const SECTIONS_TRANSLATIONS: Record<string, Record<Language, SectionTrans
     en: {
       title: "Japanese Technology & Brand Positioning",
       conceptText:
-        'CONCEPT 2: "Kiyora is being developed for Indian pollution conditions and incorporates Japanese technology / design thinking, while targeting a price of approximately ₹11,999."',
+        'CONCEPT 2: "Kiyoki is being developed for Indian pollution conditions and incorporates Japanese technology / design thinking, while targeting a price of approximately ₹11,999."',
     },
     hi: {
       title: "जापानी तकनीक और ब्रांड स्थिति",
       conceptText:
-        'अवधारणा 2: "कियोरा को भारतीय प्रदूषण स्थितियों के लिए विकसित किया जा रहा है और इसमें जापानी तकनीक / डिज़ाइन सोच शामिल है, जबकि इसकी लक्षित कीमत लगभग ₹11,999 है।"',
+        'अवधारणा 2: "कियोकी को भारतीय प्रदूषण स्थितियों के लिए विकसित किया जा रहा है और इसमें जापानी तकनीक / डिज़ाइन सोच शामिल है, जबकि इसकी लक्षित कीमत लगभग ₹11,999 है।"',
     },
   },
   F: {
     en: {
-      title: "Final Kiyora Purchase Test",
+      title: "Final Kiyoki Purchase Test",
       conceptText:
-        'FINAL PROPOSITION: "KIYORA — an air purifier built for India\'s pollution conditions, incorporating Japanese technology/design thinking, strong CADR, HEPA filtration and UV treatment, with premium design at approximately ₹11,999."',
+        'FINAL PROPOSITION: "KIYOKI — an air purifier built for India\'s pollution conditions, incorporating Japanese technology/design thinking, strong CADR, HEPA filtration and UV treatment, with premium design at approximately ₹11,999."',
     },
     hi: {
-      title: "अंतिम कियोरा खरीद परीक्षण",
+      title: "अंतिम कियोकी खरीद परीक्षण",
       conceptText:
-        'अंतिम प्रस्ताव: "कियोरा (KIYORA) — भारत की प्रदूषण स्थितियों के लिए निर्मित एक एयर प्यूरीफायर, जिसमें जापानी तकनीक / डिज़ाइन सोच, शक्तिशाली सीएडीआर (CADR), हेपा निस्पंदन और यूवी उपचार के साथ लगभग ₹11,999 में प्रीमियम डिज़ाइन शामिल है।"',
+        'अंतिम प्रस्ताव: "कियोकी (KIYOKI) — भारत की प्रदूषण स्थितियों के लिए निर्मित एक एयर प्यूरीफायर, जिसमें जापानी तकनीक / डिज़ाइन सोच, शक्तिशाली सीएडीआर (CADR), हेपा निस्पंदन और यूवी उपचार के साथ लगभग ₹11,999 में प्रीमियम डिज़ाइन शामिल है।"',
     },
   },
 };
@@ -515,7 +515,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
   },
   Q13: {
     en: {
-      questionText: "Before seeing any Kiyora concept, what price would you personally consider reasonable for a good air purifier for your home?",
+      questionText: "Before seeing any Kiyoki concept, what price would you personally consider reasonable for a good air purifier for your home?",
       options: {
         "Below ₹8,000": "Below ₹8,000",
         "₹8,000-9,999": "₹8,000-9,999",
@@ -526,7 +526,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
     hi: {
-      questionText: "कियोरा अवधारणा को देखने से पहले, अपने घर के लिए एक अच्छे एयर प्यूरीफायर के लिए आप व्यक्तिगत रूप से कौन सी कीमत उचित मानेंगे?",
+      questionText: "कियोकी अवधारणा को देखने से पहले, अपने घर के लिए एक अच्छे एयर प्यूरीफायर के लिए आप व्यक्तिगत रूप से कौन सी कीमत उचित मानेंगे?",
       options: {
         "Below ₹8,000": "₹8,000 से कम",
         "₹8,000-9,999": "₹8,000 - ₹9,999",
@@ -757,7 +757,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
   },
   Q23: {
     en: {
-      questionText: "Considering everything you have seen, how likely are you to buy / seriously consider Kiyora at ₹11,999?",
+      questionText: "Considering everything you have seen, how likely are you to buy / seriously consider Kiyoki at ₹11,999?",
       options: {
         "Definitely yes": "Definitely yes",
         "Probably yes": "Probably yes",
@@ -767,7 +767,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
     hi: {
-      questionText: "सब कुछ देखने के बाद, क्या आप ₹11,999 में कियोरा (Kiyora) खरीदने / गंभीरता से विचार करने की संभावना रखते हैं?",
+      questionText: "सब कुछ देखने के बाद, क्या आप ₹11,999 में कियोकी (Kiyoki) खरीदने / गंभीरता से विचार करने की संभावना रखते हैं?",
       options: {
         "Definitely yes": "निश्चित रूप से हाँ",
         "Probably yes": "संभवतः हाँ",
@@ -779,7 +779,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
   },
   Q24: {
     en: {
-      questionText: "Which ONE thing would most increase your confidence to buy Kiyora?",
+      questionText: "Which ONE thing would most increase your confidence to buy Kiyoki?",
       options: {
         "Independent performance test results": "Independent performance test results",
         "Clear Japanese technology/design partnership proof": "Clear Japanese technology/design partnership proof",
@@ -791,7 +791,7 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
       },
     },
     hi: {
-      questionText: "कियोरा खरीदने के आपके विश्वास को सबसे ज़्यादा कौन सी एक चीज़ बढ़ाएगी?",
+      questionText: "कियोकी खरीदने के आपके विश्वास को सबसे ज़्यादा कौन सी एक चीज़ बढ़ाएगी?",
       options: {
         "Independent performance test results": "स्वतंत्र प्रयोगशाला के प्रदर्शन परीक्षण परिणाम",
         "Clear Japanese technology/design partnership proof": "स्पष्ट जापानी तकनीक / डिज़ाइन साझेदारी का प्रमाण",
@@ -805,11 +805,11 @@ export const QUESTIONS_TRANSLATIONS: Record<string, Record<Language, QuestionTra
   },
   Q25: {
     en: {
-      questionText: "In one sentence, what would make you choose Kiyora over an established air-purifier brand?",
+      questionText: "In one sentence, what would make you choose Kiyoki over an established air-purifier brand?",
       options: {},
     },
     hi: {
-      questionText: "एक वाक्य में बताएं, स्थापित एयर प्यूरीफायर ब्रांड्स की तुलना में आप कियोरा (Kiyora) को क्यों चुनेंगे?",
+      questionText: "एक वाक्य में बताएं, स्थापित एयर प्यूरीफायर ब्रांड्स की तुलना में आप कियोकी (Kiyoki) को क्यों चुनेंगे?",
       options: {},
     },
   },

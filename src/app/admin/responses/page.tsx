@@ -74,7 +74,7 @@ export default function ResponsesPage() {
       link.href = url;
       const timestamp = new Date().toISOString().split('T')[0];
       const filterSuffix = filter !== 'all' ? `-${filter}` : '';
-      link.download = `kiyora-survey-responses${filterSuffix}-${timestamp}.csv`;
+      link.download = `kiyoki-survey-responses${filterSuffix}-${timestamp}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

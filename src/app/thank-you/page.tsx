@@ -15,7 +15,8 @@ export default function ThankYouPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const storedLang = sessionStorage.getItem("kiyora_lang") as Language | null;
+    const storedLang = (sessionStorage.getItem("kiyoki_lang") ||
+      sessionStorage.getItem("kiyora_lang")) as Language | null;
     if (storedLang === "hi" || storedLang === "en") {
       setLanguage(storedLang);
     }
@@ -29,7 +30,9 @@ export default function ThankYouPage() {
 
     setLoading(true);
     try {
-      const sessionToken = sessionStorage.getItem("kiyora_session");
+      const sessionToken =
+        sessionStorage.getItem("kiyoki_session") ||
+        sessionStorage.getItem("kiyora_session");
       const res = await fetch("/api/survey/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -41,6 +44,7 @@ export default function ThankYouPage() {
       });
       if (res.ok) {
         setSubmitted(true);
+        sessionStorage.removeItem("kiyoki_session");
         sessionStorage.removeItem("kiyora_session");
       }
     } catch {

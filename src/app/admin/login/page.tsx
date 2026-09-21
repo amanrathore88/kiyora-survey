@@ -47,7 +47,7 @@ export default function AdminLogin() {
           height={72}
           className="rounded-full mb-3 bg-white p-1 shadow-md"
         />
-        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-widest mb-1">KIYORA</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-widest mb-1">KIYOKI</h1>
         <h2 className="text-center text-sm sm:text-base font-medium text-gray-300">
           Admin Portal
         </h2>

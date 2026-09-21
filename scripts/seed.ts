@@ -73,10 +73,10 @@ async function seed() {
   const [survey] = await db
     .insert(schema.surveys)
     .values({
-      title: "KIYORA Customer Research Questionnaire",
+      title: "KIYOKI Customer Research Questionnaire",
       description: "India Air Purifier Concept & Price Validation",
       incentiveText:
-        "Participants who successfully complete the full research survey/session will receive a coupon worth \u20b92,000. The coupon is a research participation reward and should not be presented as a discount on the air purifier.",
+        "Participants who successfully complete the full research survey/session will receive a coupon worth ₹2,000. The coupon is a research participation reward and should not be presented as a discount on the air purifier.",
       isActive: true,
     })
     .returning();
@@ -103,24 +103,24 @@ async function seed() {
     },
     {
       sectionKey: "D",
-      sectionTitle: "Blind Kiyora Concept Test",
+      sectionTitle: "Blind Kiyoki Concept Test",
       orderIndex: 4,
       conceptText:
-        'CONCEPT 1: "A premium air purifier designed specifically for India\'s high-pollution conditions, with strong air-cleaning performance, HEPA filtration, UV treatment and a premium minimalist design. Expected price: \u20b911,999."',
+        'CONCEPT 1: "A premium air purifier designed specifically for India\'s high-pollution conditions, with strong air-cleaning performance, HEPA filtration, UV treatment and a premium minimalist design. Expected price: ₹11,999."',
     },
     {
       sectionKey: "E",
       sectionTitle: "Japanese Technology & Brand Positioning",
       orderIndex: 5,
       conceptText:
-        'CONCEPT 2: "Kiyora is being developed for Indian pollution conditions and incorporates Japanese technology / design thinking, while targeting a price of approximately \u20b911,999."',
+        'CONCEPT 2: "Kiyoki is being developed for Indian pollution conditions and incorporates Japanese technology / design thinking, while targeting a price of approximately ₹11,999."',
     },
     {
       sectionKey: "F",
-      sectionTitle: "Final Kiyora Purchase Test",
+      sectionTitle: "Final Kiyoki Purchase Test",
       orderIndex: 6,
       conceptText:
-        'FINAL PROPOSITION: "KIYORA \u2014 an air purifier built for India\'s pollution conditions, incorporating Japanese technology/design thinking, strong CADR, HEPA filtration and UV treatment, with premium design at approximately \u20b911,999."',
+        'FINAL PROPOSITION: "KIYOKI — an air purifier built for India\'s pollution conditions, incorporating Japanese technology/design thinking, strong CADR, HEPA filtration and UV treatment, with premium design at approximately ₹11,999."',
     },
   ];
 
@@ -336,15 +336,15 @@ async function seed() {
       questionNumber: "Q13",
       orderIndex: 13,
       questionText:
-        "Before seeing any Kiyora concept, what price would you personally consider reasonable for a good air purifier for your home?",
+        "Before seeing any Kiyoki concept, what price would you personally consider reasonable for a good air purifier for your home?",
       questionType: "radio",
       options: [
-        "Below \u20b98,000",
-        "\u20b98,000-9,999",
-        "\u20b910,000-11,999",
-        "\u20b912,000-14,999",
-        "\u20b915,000-19,999",
-        "\u20b920,000+",
+        "Below ₹8,000",
+        "₹8,000-9,999",
+        "₹10,000-11,999",
+        "₹12,000-14,999",
+        "₹15,000-19,999",
+        "₹20,000+",
       ],
     },
     {
@@ -382,13 +382,13 @@ async function seed() {
       ],
     },
 
-    // === Section D: Blind Kiyora Concept Test ===
+    // === Section D: Blind Kiyoki Concept Test ===
     {
       sectionId: sec["D"],
       questionNumber: "Q16",
       orderIndex: 16,
       questionText:
-        "Based only on the description above, how likely would you be to consider buying it at \u20b911,999?",
+        "Based only on the description above, how likely would you be to consider buying it at ₹11,999?",
       questionType: "radio",
       researcherNote:
         "Record purchase intent at Q16 before revealing Japanese technology, then compare it with Q23. This helps measure whether the Japanese-technology + India-pollution positioning actually increases consideration. Do not coach respondents toward a positive answer.",
@@ -404,7 +404,7 @@ async function seed() {
       sectionId: sec["D"],
       questionNumber: "Q17",
       orderIndex: 17,
-      questionText: "What is your FIRST reaction to the \u20b911,999 price?",
+      questionText: "What is your FIRST reaction to the ₹11,999 price?",
       questionType: "radio",
       options: [
         "Very good value",
@@ -419,7 +419,7 @@ async function seed() {
       questionNumber: "Q18",
       orderIndex: 18,
       questionText:
-        "What would you need to believe or verify before paying \u20b911,999? (Select up to 3)",
+        "What would you need to believe or verify before paying ₹11,999? (Select up to 3)",
       questionType: "checkbox",
       maxSelections: 3,
       hasOtherOption: true,
@@ -503,13 +503,13 @@ async function seed() {
       ],
     },
 
-    // === Section F: Final Kiyora Purchase Test ===
+    // === Section F: Final Kiyoki Purchase Test ===
     {
       sectionId: sec["F"],
       questionNumber: "Q23",
       orderIndex: 23,
       questionText:
-        "Considering everything you have seen, how likely are you to buy / seriously consider Kiyora at \u20b911,999?",
+        "Considering everything you have seen, how likely are you to buy / seriously consider Kiyoki at ₹11,999?",
       questionType: "radio",
       options: [
         "Definitely yes",
@@ -524,7 +524,7 @@ async function seed() {
       questionNumber: "Q24",
       orderIndex: 24,
       questionText:
-        "Which ONE thing would most increase your confidence to buy Kiyora?",
+        "Which ONE thing would most increase your confidence to buy Kiyoki?",
       questionType: "radio",
       hasOtherOption: true,
       options: [
@@ -542,7 +542,7 @@ async function seed() {
       questionNumber: "Q25",
       orderIndex: 25,
       questionText:
-        "In one sentence, what would make you choose Kiyora over an established air-purifier brand?",
+        "In one sentence, what would make you choose Kiyoki over an established air-purifier brand?",
       questionType: "text",
       options: [],
     },
@@ -604,7 +604,7 @@ async function seed() {
   });
 
   console.log("\u2705 Database seeded successfully!");
-  console.log("   Survey: KIYORA Customer Research Questionnaire");
+  console.log("   Survey: KIYOKI Customer Research Questionnaire");
   console.log("   Sections: 6 (A-F)");
   console.log("   Questions: 25");
   console.log("   Admin user: admin");

@@ -23,13 +23,13 @@ export default function HomePage() {
       });
       const data = await res.json();
       if (data.sessionToken) {
-        sessionStorage.setItem("kiyora_session", data.sessionToken);
-        sessionStorage.setItem("kiyora_lang", selectedLanguage);
+        sessionStorage.setItem("kiyoki_session", data.sessionToken);
+        sessionStorage.setItem("kiyoki_lang", selectedLanguage);
         if (Array.isArray(data.questions)) {
-          sessionStorage.setItem("kiyora_questions", JSON.stringify(data.questions));
+          sessionStorage.setItem("kiyoki_questions", JSON.stringify(data.questions));
         }
         if (data.totalQuestions) {
-          sessionStorage.setItem("kiyora_total_q", String(data.totalQuestions));
+          sessionStorage.setItem("kiyoki_total_q", String(data.totalQuestions));
         }
         router.push("/survey");
       }

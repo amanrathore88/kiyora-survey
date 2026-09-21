@@ -4,10 +4,10 @@ import { cookies } from "next/headers";
 const JWT_SECRET_KEY = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET ||
     process.env.JWT_SECRET ||
-    "kiyora-dev-secret-change-me"
+    "kiyoki-dev-secret-change-me"
 );
 
-const COOKIE_NAME = "kiyora_admin_session";
+const COOKIE_NAME = "kiyoki_admin_session";
 
 export async function hashPassword(password: string): Promise<string> {
   // Using Web Crypto API for password hashing (works in Edge runtime)
@@ -99,7 +99,9 @@ export async function verifySession(): Promise<{
   username: string;
 } | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
+  const token =
+    cookieStore.get(COOKIE_NAME)?.value ||
+    cookieStore.get("kiyora_admin_session")?.value;
 
   if (!token) return null;
 
@@ -117,4 +119,5 @@ export async function verifySession(): Promise<{
 export async function destroySession() {
   const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);
+  cookieStore.delete("kiyora_admin_session");
 }

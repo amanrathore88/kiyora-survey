@@ -43,7 +43,7 @@ export default function AdminNav() {
                 height={36}
                 className="rounded-full bg-white p-0.5"
               />
-              <span className="font-bold text-lg ml-2.5 tracking-wide text-white">KIYORA</span>
+              <span className="font-bold text-lg ml-2.5 tracking-wide text-white">KIYOKI</span>
               <span className="ml-2 text-xs text-gray-300 border-l border-gray-500 pl-2">Admin</span>
             </Link>
 

@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "KIYORA Customer Research Questionnaire",
+  title: "KIYOKI Customer Research Questionnaire",
   description: "India Air Purifier Concept & Price Validation — Kiyoki Private Limited",
   icons: {
     icon: "/logo.png",
