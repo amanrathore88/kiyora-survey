@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { questions, questionOptions, sections } from "./schema";
 import { eq, asc } from "drizzle-orm";
+import { ensureDatabaseReady } from "./init-db";
 
 export interface CachedQuestionOption {
   id: number;
@@ -46,6 +47,7 @@ export function invalidateSurveyCache() {
 }
 
 export async function getCachedSurveyQuestions(): Promise<CachedQuestion[]> {
+  await ensureDatabaseReady();
   const now = Date.now();
   if (cache && now - cache.timestamp < CACHE_TTL_MS) {
     return cache.questions;

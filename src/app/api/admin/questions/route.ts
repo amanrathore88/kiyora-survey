@@ -11,12 +11,14 @@ import {
 import { eq, asc } from "drizzle-orm";
 import { requireAdmin } from "@/lib/middleware";
 import { invalidateSurveyCache } from "@/lib/survey-cache";
+import { ensureDatabaseReady } from "@/lib/init-db";
 
 export async function GET() {
   const auth = await requireAdmin();
   if (!auth.authorized) return auth.response;
 
   try {
+    await ensureDatabaseReady();
     const allSections = await db
       .select()
       .from(sections)

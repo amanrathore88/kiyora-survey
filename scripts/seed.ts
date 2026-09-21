@@ -615,7 +615,7 @@ async function seed() {
   console.log("\u2705 Database seeded successfully!");
   console.log("   Survey: KIYOKI Customer Research Questionnaire");
   console.log("   Sections: 6 (A-F)");
-  console.log("   Questions: 25");
+  console.log("   Questions: 26");
   console.log("   Admin user: admin");
   process.exit(0);
 }

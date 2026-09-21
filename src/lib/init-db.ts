@@ -10,9 +10,11 @@ export async function ensureDatabaseReady(): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
       try {
-        // Fast-path: Check if questions table already exists and has data in 1 quick query
+        // Fast-path: Check if questions table already exists and has Q10
         try {
-          const quickCheck = await client.execute("SELECT count(*) as count FROM questions");
+          const quickCheck = await client.execute(
+            "SELECT count(*) as count FROM questions WHERE question_text LIKE '%severity of air pollution%'"
+          );
           const count = Number(quickCheck.rows[0]?.count || 0);
           if (count > 0) {
             isDbReady = true;
