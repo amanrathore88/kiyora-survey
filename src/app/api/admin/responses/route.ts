@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import {
   surveySessions,
   responses,
+  responseAnswers,
   respondentContacts,
 } from "@/lib/schema";
 import { eq, count, desc } from "drizzle-orm";
@@ -92,6 +93,68 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error updating archive status:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.authorized) return auth.response;
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const paramId = searchParams.get("sessionId");
+
+    let sessionId: number | null = null;
+    if (paramId) {
+      sessionId = parseInt(paramId, 10);
+    } else {
+      const body = await req.json().catch(() => ({}));
+      if (body.sessionId) sessionId = parseInt(body.sessionId, 10);
+    }
+
+    if (!sessionId || isNaN(sessionId)) {
+      return NextResponse.json(
+        { error: "Invalid or missing sessionId parameter" },
+        { status: 400 }
+      );
+    }
+
+    // 1. Find all responses associated with this session
+    const sessionResponses = await db
+      .select({ id: responses.id })
+      .from(responses)
+      .where(eq(responses.sessionId, sessionId));
+
+    const responseIds = sessionResponses.map((r) => r.id);
+
+    // 2. Cascade delete response answers
+    for (const rId of responseIds) {
+      await db
+        .delete(responseAnswers)
+        .where(eq(responseAnswers.responseId, rId));
+    }
+
+    // 3. Delete responses
+    await db.delete(responses).where(eq(responses.sessionId, sessionId));
+
+    // 4. Delete respondent contacts
+    await db
+      .delete(respondentContacts)
+      .where(eq(respondentContacts.sessionId, sessionId));
+
+    // 5. Delete survey session (removes session token from Sessions list)
+    await db.delete(surveySessions).where(eq(surveySessions.id, sessionId));
+
+    return NextResponse.json({
+      success: true,
+      message: `Session #${sessionId} and all its response data were permanently deleted.`,
+    });
+  } catch (error) {
+    console.error("Error deleting response and session:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

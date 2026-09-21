@@ -114,3 +114,60 @@ export async function GET(
     );
   }
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAdmin();
+  if (!auth.authorized) return auth.response;
+
+  try {
+    const { id } = await params;
+    const sessionId = parseInt(id, 10);
+
+    if (!sessionId || isNaN(sessionId)) {
+      return NextResponse.json(
+        { error: "Invalid session ID" },
+        { status: 400 }
+      );
+    }
+
+    // 1. Get responses for session
+    const sessionResponses = await db
+      .select({ id: responses.id })
+      .from(responses)
+      .where(eq(responses.sessionId, sessionId));
+
+    const responseIds = sessionResponses.map((r) => r.id);
+
+    // 2. Delete response answers
+    for (const rId of responseIds) {
+      await db
+        .delete(responseAnswers)
+        .where(eq(responseAnswers.responseId, rId));
+    }
+
+    // 3. Delete responses
+    await db.delete(responses).where(eq(responses.sessionId, sessionId));
+
+    // 4. Delete respondent contacts
+    await db
+      .delete(respondentContacts)
+      .where(eq(respondentContacts.sessionId, sessionId));
+
+    // 5. Delete session
+    await db.delete(surveySessions).where(eq(surveySessions.id, sessionId));
+
+    return NextResponse.json({
+      success: true,
+      message: `Session #${sessionId} and all its data deleted successfully`,
+    });
+  } catch (error) {
+    console.error("Error deleting response detail session:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

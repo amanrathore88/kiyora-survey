@@ -58,6 +58,9 @@ export default function ResponseDetailPage() {
     }
   }, [id, fetchResponseDetail]);
 
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleToggleArchive = async () => {
     if (!response) return;
     try {
@@ -69,6 +72,27 @@ export default function ResponseDetailPage() {
       fetchResponseDetail();
     } catch (error) {
       console.error('Failed to update response status', error);
+    }
+  };
+
+  const handleDeleteResponse = async () => {
+    if (!response) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/responses/${response.sessionId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        router.push('/admin/responses');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Failed to delete response.');
+        setIsDeleting(false);
+      }
+    } catch (error) {
+      console.error('Delete response error:', error);
+      alert('An error occurred while deleting response.');
+      setIsDeleting(false);
     }
   };
 
@@ -104,17 +128,28 @@ export default function ResponseDetailPage() {
     <div className="min-h-screen bg-gray-50 pb-12">
       <AdminNav />
       <main className="max-w-4xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
-        {/* Navigation and Archive Action Bar */}
+        {/* Navigation and Archive/Delete Action Bar */}
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <Link href="/admin/responses" className="text-[#1b2a4a] hover:underline font-semibold text-xs sm:text-sm flex items-center gap-1.5">
             &larr; Back to Responses
           </Link>
-          <button
-            onClick={handleToggleArchive}
-            className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl bg-white hover:bg-gray-50 text-gray-700 font-semibold shadow-xs transition cursor-pointer text-center"
-          >
-            {response.isArchived ? 'Restore to Active' : 'Archive Response'}
-          </button>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={handleToggleArchive}
+              className="flex-1 sm:flex-none px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl bg-white hover:bg-gray-50 text-gray-700 font-semibold shadow-xs transition cursor-pointer text-center"
+            >
+              {response.isArchived ? 'Restore to Active' : 'Archive Response'}
+            </button>
+            <button
+              onClick={() => setDeleteModalOpen(true)}
+              className="flex-1 sm:flex-none px-4 py-2 text-xs sm:text-sm border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 font-semibold rounded-xl shadow-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>Delete Response</span>
+            </button>
+          </div>
         </div>
 
         {/* Participant & Session Info Card */}
@@ -212,6 +247,64 @@ export default function ResponseDetailPage() {
             </div>
           ))}
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {deleteModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-gray-100">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Delete Respondent Submission?</h3>
+                  <p className="text-xs text-gray-500">Session #{response.sessionId} • {response.participantName || 'Anonymous'}</p>
+                </div>
+              </div>
+
+              <div className="bg-red-50/70 border border-red-200 rounded-xl p-3.5 mb-5 text-xs text-red-800 space-y-1.5 leading-relaxed">
+                <p className="font-semibold">⚠️ This will permanently remove:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-red-700">
+                  <li>All {response.answers.length} recorded answers for this respondent</li>
+                  <li>Contact details (Name & Contact)</li>
+                  <li>The session token from the <strong>Sessions</strong> list</li>
+                </ul>
+                <p className="pt-1 text-[11px] text-red-600">This ensures complete consistency between Responses and Sessions.</p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setDeleteModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl text-xs font-semibold hover:bg-gray-100 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleDeleteResponse}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold transition shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <>
+                      <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <span>Permanently Delete</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
