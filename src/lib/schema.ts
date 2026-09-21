@@ -155,6 +155,7 @@ export const surveySessions = sqliteTable("survey_sessions", {
     .notNull()
     .default("in_progress"),
   currentQuestionIndex: integer("current_question_index").notNull().default(0),
+  language: text("language").notNull().default("en"),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   startedAt: text("started_at")

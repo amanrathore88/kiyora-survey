@@ -1,26 +1,95 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --kiyora-navy: #1b2a4a;
+  --kiyora-navy-light: #2d4a7a;
+  --kiyora-navy-dark: #0f1a2e;
+  --kiyora-gold: #c9a84c;
+  --kiyora-gray-50: #f8f9fa;
+  --kiyora-gray-100: #e9ecef;
+  --kiyora-gray-200: #dee2e6;
+  --kiyora-gray-300: #ced4da;
+  --kiyora-gray-500: #6c757d;
+  --kiyora-gray-700: #495057;
+  --kiyora-gray-900: #212529;
+  --kiyora-success: #28a745;
+  --kiyora-warning: #ffc107;
+  --kiyora-danger: #dc3545;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  background-color: var(--kiyora-gray-50);
+  color: var(--kiyora-gray-900);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--kiyora-gray-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--kiyora-gray-300);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--kiyora-gray-500);
+}
+
+/* Survey radio/checkbox styling */
+.survey-option {
+  display: flex;
+  align-items: center;
+  padding: 0.875rem 1.25rem;
+  border: 2px solid var(--kiyora-gray-200);
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.survey-option:hover {
+  border-color: var(--kiyora-navy-light);
+  background: #f0f4ff;
+}
+
+.survey-option.selected {
+  border-color: var(--kiyora-navy);
+  background: #e8edf5;
+}
+
+.survey-option input[type="radio"],
+.survey-option input[type="checkbox"] {
+  accent-color: var(--kiyora-navy);
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Progress bar animation */
+.progress-fill {
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Concept card styling */
+.concept-card {
+  background: linear-gradient(135deg, #f8f4e8 0%, #fff9eb 100%);
+  border-left: 4px solid var(--kiyora-gold);
+}
+
+/* Admin table */
+.admin-table th {
+  background-color: var(--kiyora-navy);
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.admin-table tr:hover td {
+  background-color: #f0f4ff;
 }
