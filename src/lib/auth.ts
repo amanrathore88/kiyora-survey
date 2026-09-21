@@ -2,7 +2,9 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
 const JWT_SECRET_KEY = new TextEncoder().encode(
-  process.env.JWT_SECRET || "kiyora-dev-secret-change-me"
+  process.env.ADMIN_JWT_SECRET ||
+    process.env.JWT_SECRET ||
+    "kiyora-dev-secret-change-me"
 );
 
 const COOKIE_NAME = "kiyora_admin_session";

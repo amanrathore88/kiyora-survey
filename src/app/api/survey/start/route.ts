@@ -9,9 +9,11 @@ import {
 } from "@/lib/schema";
 import { eq, and, asc } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { ensureDatabaseReady } from "@/lib/init-db";
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDatabaseReady();
     const ip =
       req.headers.get("x-forwarded-for") ||
       req.headers.get("x-real-ip") ||

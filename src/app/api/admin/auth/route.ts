@@ -3,9 +3,11 @@ import { db } from "@/lib/db";
 import { adminUsers } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { verifyPassword, createSession, destroySession } from "@/lib/auth";
+import { ensureDatabaseReady } from "@/lib/init-db";
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDatabaseReady();
     const { username, password } = await req.json();
 
     if (!username || !password) {
