@@ -99,6 +99,9 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     skipping: "Skipping...",
     skipThisQuestion: "Skip this question",
     skipQuestionTooltip: "Skip this question and proceed to next",
+    autoAdvance: "Auto-advance",
+    autoAdvanceTooltip: "Automatically open next question when an option is selected",
+    autoAdvancing: "Opening next...",
   },
   hi: {
     surveyTitle: "कियोकी (KIYOKI)",
@@ -188,6 +191,9 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     skipping: "छोड़ा जा रहा है...",
     skipThisQuestion: "यह प्रश्न छोड़ें",
     skipQuestionTooltip: "यह प्रश्न छोड़कर आगे बढ़ें",
+    autoAdvance: "स्वतः आगे बढ़ें",
+    autoAdvanceTooltip: "विकल्प चुनते ही स्वतः अगला प्रश्न खोलें",
+    autoAdvancing: "अगला खुल रहा है...",
   },
 };
 

@@ -7,6 +7,8 @@ interface RadioQuestionProps {
   otherText: string;
   otherLabel?: string;
   placeholder?: string;
+  autoAdvancingId?: number | null;
+  autoAdvancingLabel?: string;
   onSelect: (id: number) => void;
   onOtherChange: (text: string) => void;
 }
@@ -18,37 +20,59 @@ export default function RadioQuestion({
   otherText,
   otherLabel = "Other",
   placeholder = "Please specify...",
+  autoAdvancingId = null,
+  autoAdvancingLabel = "Opening next...",
   onSelect,
   onOtherChange,
 }: RadioQuestionProps) {
   return (
     <div className="space-y-3">
-      {options.map((option) => (
-        <div
-          key={option.id}
-          role="button"
-          tabIndex={0}
-          className={`survey-option cursor-pointer select-none transition-all ${
-            selectedId === option.id ? "selected ring-2 ring-[#1b2a4a]" : ""
-          }`}
-          onClick={() => onSelect(option.id)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              onSelect(option.id);
-            }
-          }}
-        >
-          <input
-            type="radio"
-            name="survey-radio"
-            checked={selectedId === option.id}
-            readOnly
-            className="cursor-pointer"
-          />
-          <span className="text-sm md:text-base">{option.optionText}</span>
-        </div>
-      ))}
+      {options.map((option) => {
+        const isAdvancing = autoAdvancingId === option.id;
+        const isSelected = selectedId === option.id;
+
+        return (
+          <div
+            key={option.id}
+            role="button"
+            tabIndex={0}
+            className={`survey-option cursor-pointer select-none transition-all flex items-center justify-between ${
+              isAdvancing
+                ? "selected ring-2 ring-emerald-500 bg-emerald-50/60 border-emerald-400"
+                : isSelected
+                ? "selected ring-2 ring-[#1b2a4a]"
+                : ""
+            }`}
+            onClick={() => onSelect(option.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelect(option.id);
+              }
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <input
+                type="radio"
+                name="survey-radio"
+                checked={isSelected}
+                readOnly
+                className="cursor-pointer"
+              />
+              <span className="text-sm md:text-base font-medium">{option.optionText}</span>
+            </div>
+
+            {isAdvancing && (
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-100/90 px-2.5 py-1 rounded-full animate-pulse flex-shrink-0">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+                {autoAdvancingLabel}
+              </span>
+            )}
+          </div>
+        );
+      })}
       {hasOther && (
         <div
           role="button"

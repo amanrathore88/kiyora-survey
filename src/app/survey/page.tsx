@@ -76,6 +76,32 @@ export default function SurveyPage() {
   const [abandonSaving, setAbandonSaving] = useState(false);
   const [resumeToast, setResumeToast] = useState<string | null>(null);
 
+  // Auto-advance state (default: true)
+  const [autoAdvance, setAutoAdvance] = useState<boolean>(true);
+  const [autoAdvancingId, setAutoAdvancingId] = useState<number | null>(null);
+  const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load autoAdvance preference from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("kiyoki_auto_advance");
+      if (saved !== null) {
+        setAutoAdvance(saved !== "false");
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Cleanup auto-advance timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+      }
+    };
+  }, []);
+
   // Refs for tracking data without triggering effect re-runs
   const allQuestionsRef = useRef<QuestionData[]>([]);
   const answersHistoryRef = useRef<Record<number, AnswerState>>({});
@@ -164,6 +190,12 @@ export default function SurveyPage() {
   // Instantly displays a question and handles section concept cards
   const displayQuestion = useCallback(
     (q: QuestionData, index: number, dir: number = 1) => {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+      setAutoAdvancingId(null);
+
       setDirection(dir);
       setCurrentIndex(index);
       setQuestion(q);
@@ -385,13 +417,13 @@ export default function SurveyPage() {
     return null;
   };
 
-  // High-performance Optimistic Next: 0ms UI transition + non-blocking background save
-  const handleNext = async () => {
-    const validationError = validateAnswer();
-    if (validationError) {
-      setError(validationError);
-      return;
+  // Core advance logic shared by manual "Next" and "Auto-advance"
+  const advanceWithAnswer = async (answerToSave: AnswerState) => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
     }
+    setAutoAdvancingId(null);
 
     if (!question) return;
     setError("");
@@ -402,7 +434,7 @@ export default function SurveyPage() {
       sessionStorage.getItem("kiyora_session");
 
     // 1. Immediately record answer in local history
-    answersHistoryRef.current[question.id] = { ...answer };
+    answersHistoryRef.current[question.id] = { ...answerToSave };
 
     // 2. Fire non-blocking background save to database
     if (currentToken) {
@@ -412,9 +444,9 @@ export default function SurveyPage() {
         body: JSON.stringify({
           sessionToken: currentToken,
           questionId: question.id,
-          selectedOptionIds: answer.selectedOptionIds,
-          otherText: answer.otherText || undefined,
-          freeText: answer.freeText || undefined,
+          selectedOptionIds: answerToSave.selectedOptionIds,
+          otherText: answerToSave.otherText || undefined,
+          freeText: answerToSave.freeText || undefined,
         }),
       }).catch((err) => console.error("Background answer save error:", err));
     }
@@ -446,8 +478,53 @@ export default function SurveyPage() {
     displayQuestion(nextQ, nextIdx, 1);
   };
 
+  // High-performance Optimistic Next: 0ms UI transition + non-blocking background save
+  const handleNext = async () => {
+    const validationError = validateAnswer();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    await advanceWithAnswer(answer);
+  };
+
+  // Instant radio selection with auto-advance
+  const handleRadioSelect = (id: number) => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+
+    const newAnswer: AnswerState = {
+      selectedOptionIds: [id],
+      otherText: id === -1 ? answer.otherText : "",
+      freeText: "",
+    };
+
+    setAnswer(newAnswer);
+    setError("");
+
+    // If auto-advance is enabled and user selected a regular option (not "Other")
+    if (autoAdvance && id !== -1) {
+      setAutoAdvancingId(id);
+      autoAdvanceTimerRef.current = setTimeout(() => {
+        setAutoAdvancingId(null);
+        void advanceWithAnswer(newAnswer);
+      }, 280);
+    } else {
+      setAutoAdvancingId(null);
+    }
+  };
+
   // High-performance Optimistic Skip: 0ms UI transition + non-blocking background skip
   const handleSkip = async () => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    setAutoAdvancingId(null);
+
     if (!question || submitting) return;
     setError("");
 
@@ -501,6 +578,12 @@ export default function SurveyPage() {
 
   // High-performance Back navigation (0ms instant transition)
   const handleBack = () => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    setAutoAdvancingId(null);
+
     if (currentIndex <= 1) return;
     setError("");
 
@@ -520,6 +603,11 @@ export default function SurveyPage() {
 
   // Pause survey handlers
   const handlePauseClick = async () => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    setAutoAdvancingId(null);
     setShowPauseModal(true);
     const currentToken =
       sessionToken ||
@@ -594,6 +682,11 @@ export default function SurveyPage() {
 
   // Abandon survey handler
   const handleAbandonConfirm = async () => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    setAutoAdvancingId(null);
     const currentToken =
       sessionToken ||
       sessionStorage.getItem("kiyoki_session") ||
@@ -848,15 +941,62 @@ export default function SurveyPage() {
                 exit={{ opacity: 0, x: direction * -40 }}
                 transition={{ duration: 0.25 }}
               >
-                {/* Section Badge */}
-                <div className="mb-4 flex items-center gap-2">
-                  <span className="inline-block px-3 py-1 bg-[#1b2a4a] text-white text-xs font-semibold rounded-full">
-                    {language === "hi" ? "अनुभाग " : "Section "}
-                    {question.section.sectionKey}
-                  </span>
-                  <span className="text-sm font-medium text-gray-600">
-                    {translatedSection?.title}
-                  </span>
+                {/* Section Badge & Auto-advance Toggle */}
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block px-3 py-1 bg-[#1b2a4a] text-white text-xs font-semibold rounded-full shadow-2xs">
+                      {language === "hi" ? "अनुभाग " : "Section "}
+                      {question.section.sectionKey}
+                    </span>
+                    <span className="text-sm font-medium text-gray-700">
+                      {translatedSection?.title}
+                    </span>
+                  </div>
+
+                  {/* Auto-advance Option Switch */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextVal = !autoAdvance;
+                      setAutoAdvance(nextVal);
+                      if (!nextVal && autoAdvanceTimerRef.current) {
+                        clearTimeout(autoAdvanceTimerRef.current);
+                        autoAdvanceTimerRef.current = null;
+                        setAutoAdvancingId(null);
+                      }
+                      try {
+                        localStorage.setItem("kiyoki_auto_advance", String(nextVal));
+                      } catch {
+                        // ignore
+                      }
+                    }}
+                    className={`px-3 py-1 text-xs font-medium rounded-full border transition-all flex items-center gap-1.5 cursor-pointer select-none shadow-2xs ${
+                      autoAdvance
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                        : "bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200"
+                    }`}
+                    title={t.autoAdvanceTooltip}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        autoAdvance ? "bg-emerald-500 ring-2 ring-emerald-300 animate-pulse" : "bg-gray-400"
+                      }`}
+                    />
+                    <span>{t.autoAdvance}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                        autoAdvance ? "bg-emerald-600 text-white" : "bg-gray-300 text-gray-700"
+                      }`}
+                    >
+                      {autoAdvance
+                        ? language === "hi"
+                          ? "चालू"
+                          : "ON"
+                        : language === "hi"
+                        ? "बंद"
+                        : "OFF"}
+                    </span>
+                  </button>
                 </div>
 
                 {/* Question Card */}
@@ -891,13 +1031,9 @@ export default function SurveyPage() {
                       otherText={answer.otherText}
                       otherLabel={t.other}
                       placeholder={t.pleaseSpecify}
-                      onSelect={(id) => {
-                        setAnswer((prev) => ({
-                          ...prev,
-                          selectedOptionIds: [id],
-                        }));
-                        setError("");
-                      }}
+                      autoAdvancingId={autoAdvancingId}
+                      autoAdvancingLabel={t.autoAdvancing}
+                      onSelect={handleRadioSelect}
                       onOtherChange={(text) =>
                         setAnswer((prev) => ({ ...prev, otherText: text }))
                       }
