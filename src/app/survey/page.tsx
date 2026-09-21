@@ -16,6 +16,7 @@ import {
   getTranslatedQuestion,
   getTranslatedSection,
 } from "@/lib/translations";
+import { shouldShowQuestion } from "@/lib/survey-engine";
 
 interface QuestionOption {
   id: number;
@@ -31,6 +32,7 @@ interface QuestionData {
   minSelections: number | null;
   maxSelections: number | null;
   hasOtherOption: boolean;
+  conditionalLogic?: string | null;
   orderIndex: number;
   options: QuestionOption[];
   section: {
@@ -75,6 +77,7 @@ export default function SurveyPage() {
   const [resumeToast, setResumeToast] = useState<string | null>(null);
 
   // Refs for tracking data without triggering effect re-runs
+  const allQuestionsRef = useRef<QuestionData[]>([]);
   const answersHistoryRef = useRef<Record<number, AnswerState>>({});
   const lastSectionKeyRef = useRef<string>("");
   const conceptShownRef = useRef<Set<string>>(new Set());
@@ -88,11 +91,108 @@ export default function SurveyPage() {
     sessionStorage.setItem("kiyora_lang", newLang);
   };
 
+  // Build client answers map for instant conditional logic checking
+  const getAnswersMap = useCallback((): Record<
+    string,
+    { selectedOptions: string[]; otherText?: string; freeText?: string }
+  > => {
+    const map: Record<
+      string,
+      { selectedOptions: string[]; otherText?: string; freeText?: string }
+    > = {};
+
+    const allQ = allQuestionsRef.current;
+    for (const q of allQ) {
+      const ans = answersHistoryRef.current[q.id];
+      if (!ans) continue;
+
+      const selectedOptions: string[] = [];
+      for (const optId of ans.selectedOptionIds) {
+        if (optId === -1) {
+          selectedOptions.push("Other");
+        } else {
+          const opt = q.options.find((o) => o.id === optId);
+          if (opt) selectedOptions.push(opt.optionText);
+        }
+      }
+
+      map[q.questionNumber] = {
+        selectedOptions,
+        otherText: ans.otherText,
+        freeText: ans.freeText,
+      };
+    }
+
+    return map;
+  }, []);
+
+  // Compute next valid question using in-memory question list & conditional logic (0ms)
+  const getNextValidQuestionIndex = useCallback(
+    (
+      fromIndex: number,
+      dir: number = 1
+    ): { targetIndex: number; question: QuestionData | null } => {
+      const allQ = allQuestionsRef.current;
+      if (!allQ.length) return { targetIndex: fromIndex, question: null };
+
+      const answersMap = getAnswersMap();
+      let target = fromIndex;
+
+      while (target >= 1 && target <= totalQuestionsRef.current) {
+        const candidate = allQ.find((q) => q.orderIndex === target);
+        if (!candidate) {
+          target += dir;
+          continue;
+        }
+
+        if (candidate.conditionalLogic) {
+          const show = shouldShowQuestion(candidate.conditionalLogic, answersMap);
+          if (!show) {
+            target += dir;
+            continue;
+          }
+        }
+
+        return { targetIndex: target, question: candidate };
+      }
+
+      return { targetIndex: target, question: null };
+    },
+    [getAnswersMap]
+  );
+
+  // Instantly displays a question and handles section concept cards
+  const displayQuestion = useCallback(
+    (q: QuestionData, index: number, dir: number = 1) => {
+      setDirection(dir);
+      setCurrentIndex(index);
+      setQuestion(q);
+      setError("");
+
+      const sec = q.section;
+      if (
+        sec.conceptText &&
+        sec.sectionKey !== lastSectionKeyRef.current &&
+        !conceptShownRef.current.has(sec.sectionKey)
+      ) {
+        setShowConcept(true);
+        conceptShownRef.current.add(sec.sectionKey);
+      } else {
+        setShowConcept(false);
+      }
+      lastSectionKeyRef.current = sec.sectionKey;
+
+      if (answersHistoryRef.current[q.id]) {
+        setAnswer(answersHistoryRef.current[q.id]);
+      } else {
+        setAnswer({ selectedOptionIds: [], otherText: "", freeText: "" });
+      }
+    },
+    []
+  );
+
   const fetchQuestion = useCallback(
     async (index: number, fetchDirection: number = 1, shouldShowLoading = true) => {
-      if (shouldShowLoading) {
-        setLoading(true);
-      }
       setError("");
       const currentToken =
         sessionToken || sessionStorage.getItem("kiyora_session");
@@ -101,59 +201,50 @@ export default function SurveyPage() {
         return;
       }
 
+      // Fast-path: If all questions are already in memory, display instantly (0ms)!
+      if (allQuestionsRef.current.length > 0) {
+        const { targetIndex, question: targetQ } = getNextValidQuestionIndex(
+          index,
+          fetchDirection
+        );
+        if (targetQ) {
+          displayQuestion(targetQ, targetIndex, fetchDirection);
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (shouldShowLoading) {
+        setLoading(true);
+      }
+
       try {
-        let targetIndex = index;
-        let found = false;
+        const res = await fetch(
+          `/api/survey/questions?sessionToken=${currentToken}&all=true`
+        );
+        const data = await res.json();
 
-        while (
-          targetIndex > 0 &&
-          targetIndex <= totalQuestionsRef.current &&
-          !found
-        ) {
-          const res = await fetch(
-            `/api/survey/questions?sessionToken=${currentToken}&questionIndex=${targetIndex}`
-          );
-          const data = await res.json();
+        if (!res.ok) {
+          setError(data.error || "Failed to load question");
+          setLoading(false);
+          return;
+        }
 
-          if (!res.ok) {
-            setError(data.error || "Failed to load question");
-            setLoading(false);
-            return;
-          }
+        const list: QuestionData[] = data.questions || [];
+        allQuestionsRef.current = list;
+        const totalQ = data.totalQuestions || list.length || 25;
+        totalQuestionsRef.current = totalQ;
+        setTotalQuestions(totalQ);
 
-          if (data.skip) {
-            targetIndex =
-              fetchDirection === 1 ? targetIndex + 1 : targetIndex - 1;
-            continue;
-          }
+        const { targetIndex, question: targetQ } = getNextValidQuestionIndex(
+          index,
+          fetchDirection
+        );
 
-          found = true;
-          const totalQ = data.totalQuestions || 25;
-          totalQuestionsRef.current = totalQ;
-          setTotalQuestions(totalQ);
-          setQuestion(data.question);
-          setCurrentIndex(targetIndex);
-
-          // Check if we need to show a concept card for a new section
-          const sec = data.question.section;
-          if (
-            sec.conceptText &&
-            sec.sectionKey !== lastSectionKeyRef.current &&
-            !conceptShownRef.current.has(sec.sectionKey)
-          ) {
-            setShowConcept(true);
-            conceptShownRef.current.add(sec.sectionKey);
-          } else {
-            setShowConcept(false);
-          }
-          lastSectionKeyRef.current = sec.sectionKey;
-
-          // Restore previous answer if already answered
-          if (answersHistoryRef.current[data.question.id]) {
-            setAnswer(answersHistoryRef.current[data.question.id]);
-          } else {
-            setAnswer({ selectedOptionIds: [], otherText: "", freeText: "" });
-          }
+        if (targetQ) {
+          displayQuestion(targetQ, targetIndex, fetchDirection);
+        } else if (list.length > 0) {
+          displayQuestion(list[0], 1, fetchDirection);
         }
       } catch {
         setError("Network error. Please try again.");
@@ -161,7 +252,7 @@ export default function SurveyPage() {
         setLoading(false);
       }
     },
-    [router, sessionToken]
+    [router, sessionToken, getNextValidQuestionIndex, displayQuestion]
   );
 
   // Initial load: runs strictly once on mount
@@ -170,7 +261,28 @@ export default function SurveyPage() {
     initialLoadDoneRef.current = true;
 
     async function init() {
-      // Check if URL has ?resume=<token>
+      // 1. Instant pre-hydration from sessionStorage (0ms first paint!)
+      const storedQuestions = sessionStorage.getItem("kiyora_questions");
+      if (storedQuestions) {
+        try {
+          const parsed = JSON.parse(storedQuestions);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            allQuestionsRef.current = parsed;
+            const totalQ = parsed.length;
+            totalQuestionsRef.current = totalQ;
+            setTotalQuestions(totalQ);
+            const firstQ =
+              parsed.find((q: QuestionData) => q.orderIndex === 1) || parsed[0];
+            setQuestion(firstQ);
+            setCurrentIndex(1);
+            setLoading(false);
+          }
+        } catch {
+          // ignore parsing error
+        }
+      }
+
+      // 2. Check if URL has ?resume=<token>
       const params = new URLSearchParams(window.location.search);
       const resumeToken = params.get("resume");
 
@@ -203,7 +315,7 @@ export default function SurveyPage() {
           setResumeToast(resumeMsg);
           setTimeout(() => setResumeToast(null), 4000);
 
-          await fetchQuestion(resumeIdx, 1, true);
+          await fetchQuestion(resumeIdx, 1, allQuestionsRef.current.length === 0);
           return;
         } catch {
           setInvalidSessionMsg("Unable to connect to server to verify your session.");
@@ -212,7 +324,7 @@ export default function SurveyPage() {
         }
       }
 
-      // Standard flow from home page
+      // 3. Standard flow from home page
       const storedLang = sessionStorage.getItem("kiyora_lang") as Language | null;
       if (storedLang === "hi" || storedLang === "en") {
         setLanguage(storedLang);
@@ -225,7 +337,11 @@ export default function SurveyPage() {
       }
 
       setSessionToken(storedToken);
-      void fetchQuestion(1, 1, true);
+
+      // Only fetch from network if questions weren't already hydrated from sessionStorage
+      if (allQuestionsRef.current.length === 0) {
+        void fetchQuestion(1, 1, true);
+      }
     }
 
     void init();
@@ -264,6 +380,7 @@ export default function SurveyPage() {
     return null;
   };
 
+  // High-performance Optimistic Next: 0ms UI transition + non-blocking background save
   const handleNext = async () => {
     const validationError = validateAnswer();
     if (validationError) {
@@ -272,14 +389,17 @@ export default function SurveyPage() {
     }
 
     if (!question) return;
-
-    setSubmitting(true);
     setError("");
 
-    try {
-      const currentToken =
-        sessionToken || sessionStorage.getItem("kiyora_session");
-      const res = await fetch("/api/survey/answer", {
+    const currentToken =
+      sessionToken || sessionStorage.getItem("kiyora_session");
+
+    // 1. Immediately record answer in local history
+    answersHistoryRef.current[question.id] = { ...answer };
+
+    // 2. Fire non-blocking background save to database
+    if (currentToken) {
+      fetch("/api/survey/answer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -289,52 +409,51 @@ export default function SurveyPage() {
           otherText: answer.otherText || undefined,
           freeText: answer.freeText || undefined,
         }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Failed to submit answer");
-        setSubmitting(false);
-        return;
-      }
-
-      // Save answer in history ref for back navigation
-      answersHistoryRef.current[question.id] = { ...answer };
-
-      if (currentIndex >= totalQuestions) {
-        // Complete the survey
-        await fetch("/api/survey/complete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionToken: currentToken }),
-        });
-        router.push("/thank-you");
-      } else {
-        setDirection(1);
-        await fetchQuestion(currentIndex + 1, 1, true);
-      }
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setSubmitting(false);
+      }).catch((err) => console.error("Background answer save error:", err));
     }
+
+    // 3. Find next question in memory instantly (0ms)
+    const { targetIndex: nextIdx, question: nextQ } = getNextValidQuestionIndex(
+      currentIndex + 1,
+      1
+    );
+
+    if (nextIdx > totalQuestionsRef.current || !nextQ) {
+      // Completed survey
+      setSubmitting(true);
+      if (currentToken) {
+        try {
+          await fetch("/api/survey/complete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionToken: currentToken }),
+          });
+        } catch {
+          // ignore
+        }
+      }
+      router.push("/thank-you");
+      return;
+    }
+
+    displayQuestion(nextQ, nextIdx, 1);
   };
 
+  // High-performance Optimistic Skip: 0ms UI transition + non-blocking background skip
   const handleSkip = async () => {
-    if (!question || submitting || skipping) return;
-    setSkipping(true);
+    if (!question || submitting) return;
     setError("");
 
-    try {
-      const currentToken =
-        sessionToken || sessionStorage.getItem("kiyora_session");
-      if (!currentToken) {
-        router.push("/");
-        return;
-      }
+    const currentToken =
+      sessionToken || sessionStorage.getItem("kiyora_session");
 
-      // Record skip action and clear any stored answers for this question
-      await fetch("/api/survey/skip", {
+    // Clear local answer history for this question
+    delete answersHistoryRef.current[question.id];
+    setAnswer({ selectedOptionIds: [], otherText: "", freeText: "" });
+
+    // Fire background non-blocking skip
+    if (currentToken) {
+      fetch("/api/survey/skip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -342,40 +461,48 @@ export default function SurveyPage() {
           questionId: question.id,
           currentIndex,
         }),
-      });
-
-      // Clear local answer history for this question
-      delete answersHistoryRef.current[question.id];
-      setAnswer({ selectedOptionIds: [], otherText: "", freeText: "" });
-
-      if (currentIndex >= totalQuestions) {
-        // Last question skipped, complete the survey
-        await fetch("/api/survey/complete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionToken: currentToken }),
-        });
-        router.push("/thank-you");
-      } else {
-        setDirection(1);
-        await fetchQuestion(currentIndex + 1, 1, true);
-      }
-    } catch (err) {
-      console.error("Error skipping question:", err);
-      if (currentIndex < totalQuestions) {
-        setDirection(1);
-        await fetchQuestion(currentIndex + 1, 1, true);
-      }
-    } finally {
-      setSkipping(false);
+      }).catch((err) => console.error("Background skip error:", err));
     }
+
+    // Find next question in memory instantly (0ms)
+    const { targetIndex: nextIdx, question: nextQ } = getNextValidQuestionIndex(
+      currentIndex + 1,
+      1
+    );
+
+    if (nextIdx > totalQuestionsRef.current || !nextQ) {
+      setSubmitting(true);
+      if (currentToken) {
+        try {
+          await fetch("/api/survey/complete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionToken: currentToken }),
+          });
+        } catch {
+          // ignore
+        }
+      }
+      router.push("/thank-you");
+      return;
+    }
+
+    displayQuestion(nextQ, nextIdx, 1);
   };
 
+  // High-performance Back navigation (0ms instant transition)
   const handleBack = () => {
     if (currentIndex <= 1) return;
-    setDirection(-1);
     setError("");
-    void fetchQuestion(currentIndex - 1, -1, true);
+
+    const { targetIndex: prevIdx, question: prevQ } = getNextValidQuestionIndex(
+      currentIndex - 1,
+      -1
+    );
+
+    if (!prevQ || prevIdx < 1) return;
+
+    displayQuestion(prevQ, prevIdx, -1);
   };
 
   const handleConceptContinue = () => {

@@ -2,22 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
   surveySessions,
-  questions,
-  questionOptions,
-  sections,
   responses,
   responseAnswers,
+  questionOptions,
+  questions,
 } from "@/lib/schema";
-import { eq, and, asc, inArray } from "drizzle-orm";
-import {
-  shouldShowQuestion,
-  validateResearchSequence,
-} from "@/lib/survey-engine";
+import { eq, and, inArray } from "drizzle-orm";
+import { shouldShowQuestion } from "@/lib/survey-engine";
+import { getCachedSurveyQuestions } from "@/lib/survey-cache";
 
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
     const sessionToken = searchParams.get("sessionToken");
+    const getAll = searchParams.get("all") === "true";
     const questionIndex = parseInt(
       searchParams.get("questionIndex") || "1",
       10
@@ -30,9 +28,40 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Validate session
+    // Get cached questions immediately (0ms from memory)
+    const allActiveQuestions = await getCachedSurveyQuestions();
+    const totalQuestions = allActiveQuestions.length;
+
+    if (getAll) {
+      return NextResponse.json({
+        questions: allActiveQuestions,
+        totalQuestions,
+      });
+    }
+
+    // Get the requested question by orderIndex
+    const question = allActiveQuestions.find(
+      (q) => q.orderIndex === questionIndex
+    );
+
+    if (!question) {
+      return NextResponse.json(
+        { error: "Question not found" },
+        { status: 404 }
+      );
+    }
+
+    // Fast path: if no conditional logic on this question, return immediately!
+    if (!question.conditionalLogic) {
+      return NextResponse.json({
+        question,
+        totalQuestions,
+      });
+    }
+
+    // Only for conditional questions (e.g. Q11): verify session & check previous answers in 1 query
     const sessionRows = await db
-      .select()
+      .select({ id: surveySessions.id })
       .from(surveySessions)
       .where(
         and(
@@ -49,109 +78,37 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const session = sessionRows[0];
+    const sessionId = sessionRows[0].id;
 
-    // Get total active questions
-    const allActiveQuestions = await db
-      .select({ id: questions.id, orderIndex: questions.orderIndex })
-      .from(questions)
-      .where(eq(questions.isActive, true))
-      .orderBy(asc(questions.orderIndex));
-
-    const totalQuestions = allActiveQuestions.length;
-
-    // Get the requested question by orderIndex
-    const questionRows = await db
-      .select()
-      .from(questions)
-      .where(
-        and(
-          eq(questions.orderIndex, questionIndex),
-          eq(questions.isActive, true)
-        )
-      )
-      .limit(1);
-
-    if (!questionRows.length) {
-      return NextResponse.json(
-        { error: "Question not found" },
-        { status: 404 }
-      );
-    }
-
-    const question = questionRows[0];
-
-    // Get previous answers for this session
-    const prevResponses = await db
-      .select()
+    // Get answers for conditional evaluation
+    const sessionAnswers = await db
+      .select({
+        questionNumber: questions.questionNumber,
+        optionText: questionOptions.optionText,
+        otherText: responseAnswers.otherText,
+        freeText: responseAnswers.freeText,
+      })
       .from(responses)
-      .where(eq(responses.sessionId, session.id));
+      .innerJoin(questions, eq(responses.questionId, questions.id))
+      .leftJoin(responseAnswers, eq(responses.id, responseAnswers.responseId))
+      .leftJoin(questionOptions, eq(responseAnswers.optionId, questionOptions.id))
+      .where(eq(responses.sessionId, sessionId));
 
-    // Build answers map keyed by question number
     const answersMap: Record<
       string,
       { selectedOptions: string[]; otherText?: string; freeText?: string }
     > = {};
 
-    if (prevResponses.length > 0) {
-      const responseIds = prevResponses.map((r) => r.id);
-      const questionIds = prevResponses.map((r) => r.questionId);
-
-      // Get question numbers for answered questions
-      const answeredQuestions = await db
-        .select({
-          id: questions.id,
-          questionNumber: questions.questionNumber,
-        })
-        .from(questions)
-        .where(inArray(questions.id, questionIds));
-
-      const qIdToNumber: Record<number, string> = {};
-      for (const q of answeredQuestions) {
-        qIdToNumber[q.id] = q.questionNumber;
+    for (const row of sessionAnswers) {
+      const qNum = row.questionNumber;
+      if (!answersMap[qNum]) {
+        answersMap[qNum] = { selectedOptions: [] };
       }
-
-      // Get all answers
-      const allAnswers = await db
-        .select({
-          responseId: responseAnswers.responseId,
-          questionId: responseAnswers.questionId,
-          optionId: responseAnswers.optionId,
-          otherText: responseAnswers.otherText,
-          freeText: responseAnswers.freeText,
-        })
-        .from(responseAnswers)
-        .where(inArray(responseAnswers.responseId, responseIds));
-
-      // Get option texts
-      const optionIds = allAnswers
-        .filter((a) => a.optionId !== null)
-        .map((a) => a.optionId as number);
-
-      const optionTexts: Record<number, string> = {};
-      if (optionIds.length > 0) {
-        const optRows = await db
-          .select({ id: questionOptions.id, optionText: questionOptions.optionText })
-          .from(questionOptions)
-          .where(inArray(questionOptions.id, optionIds));
-        for (const o of optRows) {
-          optionTexts[o.id] = o.optionText;
-        }
+      if (row.optionText) {
+        answersMap[qNum].selectedOptions.push(row.optionText);
       }
-
-      // Build the map
-      for (const ans of allAnswers) {
-        const qNum = qIdToNumber[ans.questionId];
-        if (!qNum) continue;
-        if (!answersMap[qNum]) {
-          answersMap[qNum] = { selectedOptions: [] };
-        }
-        if (ans.optionId && optionTexts[ans.optionId]) {
-          answersMap[qNum].selectedOptions.push(optionTexts[ans.optionId]);
-        }
-        if (ans.otherText) answersMap[qNum].otherText = ans.otherText;
-        if (ans.freeText) answersMap[qNum].freeText = ans.freeText;
-      }
+      if (row.otherText) answersMap[qNum].otherText = row.otherText;
+      if (row.freeText) answersMap[qNum].freeText = row.freeText;
     }
 
     // Evaluate conditional logic
@@ -159,48 +116,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ skip: true, nextIndex: questionIndex + 1 });
     }
 
-    // Validate research sequence
-    const answeredOrders = prevResponses.map((r) => {
-      const q = allActiveQuestions.find((aq) => aq.id === r.questionId);
-      return q ? q.orderIndex : 0;
-    });
-
-    const seqValidation = validateResearchSequence(
-      question.orderIndex,
-      answeredOrders
-    );
-    if (!seqValidation.valid) {
-      return NextResponse.json(
-        { error: seqValidation.error },
-        { status: 400 }
-      );
-    }
-
-    // Get options for this question
-    const opts = await db
-      .select()
-      .from(questionOptions)
-      .where(
-        and(
-          eq(questionOptions.questionId, question.id),
-          eq(questionOptions.isActive, true)
-        )
-      )
-      .orderBy(asc(questionOptions.orderIndex));
-
-    // Get section info
-    const sectionRows = await db
-      .select()
-      .from(sections)
-      .where(eq(sections.id, question.sectionId))
-      .limit(1);
-
     return NextResponse.json({
-      question: {
-        ...question,
-        options: opts,
-        section: sectionRows[0] || null,
-      },
+      question,
       totalQuestions,
     });
   } catch (error) {

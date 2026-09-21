@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import {
-  surveys,
-  surveySessions,
-  questions,
-  questionOptions,
-  sections,
-} from "@/lib/schema";
-import { eq, and, asc } from "drizzle-orm";
+import { surveySessions } from "@/lib/schema";
 import { v4 as uuidv4 } from "uuid";
 import { ensureDatabaseReady } from "@/lib/init-db";
+import { getCachedSurveyQuestions } from "@/lib/survey-cache";
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,79 +25,37 @@ export async function POST(req: NextRequest) {
       // Empty body fallback
     }
 
-    // Get active survey
-    const activeSurvey = await db
-      .select({ id: surveys.id })
-      .from(surveys)
-      .where(eq(surveys.isActive, true))
-      .limit(1);
+    // Run session creation and questions retrieval in parallel
+    const [allQuestions] = await Promise.all([
+      getCachedSurveyQuestions(),
+      db.insert(surveySessions).values({
+        sessionToken,
+        surveyId: 1,
+        status: "in_progress",
+        language,
+        currentQuestionIndex: 0,
+        ipAddress: ip,
+        userAgent: userAgent,
+        startedAt: new Date().toISOString(),
+        lastActivityAt: new Date().toISOString(),
+      }),
+    ]);
 
-    const surveyId = activeSurvey.length > 0 ? activeSurvey[0].id : 1;
-
-    // Create session
-    await db.insert(surveySessions).values({
-      sessionToken,
-      surveyId,
-      status: "in_progress",
-      language,
-      currentQuestionIndex: 0,
-      ipAddress: ip,
-      userAgent: userAgent,
-      startedAt: new Date().toISOString(),
-      lastActivityAt: new Date().toISOString(),
-    });
-
-    // Get total active questions
-    const allActiveQuestions = await db
-      .select({ id: questions.id })
-      .from(questions)
-      .where(eq(questions.isActive, true));
-
-    const totalQuestions = allActiveQuestions.length;
-
-    // Get first question (orderIndex = 1)
-    const firstQuestionRows = await db
-      .select()
-      .from(questions)
-      .where(and(eq(questions.orderIndex, 1), eq(questions.isActive, true)))
-      .limit(1);
-
-    if (!firstQuestionRows.length) {
+    if (!allQuestions.length) {
       return NextResponse.json(
         { error: "No active questions found" },
         { status: 404 }
       );
     }
 
-    const firstQuestion = firstQuestionRows[0];
-
-    // Get options
-    const opts = await db
-      .select()
-      .from(questionOptions)
-      .where(
-        and(
-          eq(questionOptions.questionId, firstQuestion.id),
-          eq(questionOptions.isActive, true)
-        )
-      )
-      .orderBy(asc(questionOptions.orderIndex));
-
-    // Get section
-    const sectionRows = await db
-      .select()
-      .from(sections)
-      .where(eq(sections.id, firstQuestion.sectionId))
-      .limit(1);
+    const firstQuestion =
+      allQuestions.find((q) => q.orderIndex === 1) || allQuestions[0];
 
     return NextResponse.json({
       sessionToken,
-      question: {
-        ...firstQuestion,
-        options: opts,
-        section: sectionRows[0] || null,
-      },
-      totalQuestions,
+      question: firstQuestion,
+      questions: allQuestions,
+      totalQuestions: allQuestions.length,
     });
   } catch (error) {
     console.error("Error starting survey:", error);

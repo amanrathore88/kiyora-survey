@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
   surveySessions,
-  questions,
   responses,
   responseAnswers,
 } from "@/lib/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
+import { getCachedSurveyQuestions } from "@/lib/survey-cache";
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,9 +26,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate session
+    // 1. Get question from memory cache (0ms)
+    const allQuestions = await getCachedSurveyQuestions();
+    const question = allQuestions.find((q) => q.id === questionId);
+
+    if (!question) {
+      return NextResponse.json(
+        { error: "Question not found" },
+        { status: 404 }
+      );
+    }
+
+    // 2. Validate session in 1 query
     const sessionRows = await db
-      .select()
+      .select({ id: surveySessions.id })
       .from(surveySessions)
       .where(
         and(
@@ -47,23 +58,7 @@ export async function POST(req: NextRequest) {
 
     const session = sessionRows[0];
 
-    // Validate question
-    const questionRows = await db
-      .select()
-      .from(questions)
-      .where(eq(questions.id, questionId))
-      .limit(1);
-
-    if (!questionRows.length) {
-      return NextResponse.json(
-        { error: "Question not found" },
-        { status: 404 }
-      );
-    }
-
-    const question = questionRows[0];
-
-    // Validate min/max selections for checkbox
+    // 3. Validate min/max selections for checkbox
     if (question.questionType === "checkbox" && Array.isArray(selectedOptionIds)) {
       const realSelections = selectedOptionIds.filter((id: number) => id !== -1);
       const count = realSelections.length + (selectedOptionIds.includes(-1) ? 1 : 0);
@@ -88,7 +83,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Delete any existing response for this question in this session (for back navigation)
+    // 4. Delete any existing response for this question in this session
     const existingResponses = await db
       .select({ id: responses.id })
       .from(responses)
@@ -100,15 +95,14 @@ export async function POST(req: NextRequest) {
       );
 
     if (existingResponses.length > 0) {
-      for (const existing of existingResponses) {
-        await db
-          .delete(responseAnswers)
-          .where(eq(responseAnswers.responseId, existing.id));
-        await db.delete(responses).where(eq(responses.id, existing.id));
-      }
+      const existingIds = existingResponses.map((r) => r.id);
+      await db
+        .delete(responseAnswers)
+        .where(inArray(responseAnswers.responseId, existingIds));
+      await db.delete(responses).where(inArray(responses.id, existingIds));
     }
 
-    // Create response record
+    // 5. Create response record
     const [responseRecord] = await db
       .insert(responses)
       .values({
@@ -120,22 +114,27 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
-    // Create response_answers
+    // 6. Build batch answer records
+    const answersToInsert: {
+      responseId: number;
+      questionId: number;
+      optionId: number | null;
+      otherText: string | null;
+      freeText: string | null;
+    }[] = [];
+
     if (question.questionType === "text") {
-      // Text question — store freeText
-      await db.insert(responseAnswers).values({
+      answersToInsert.push({
         responseId: responseRecord.id,
         questionId: question.id,
         optionId: null,
         otherText: null,
         freeText: freeText || "",
       });
-    } else {
-      // Radio or checkbox — store selected options
+    } else if (Array.isArray(selectedOptionIds)) {
       for (const optionId of selectedOptionIds) {
         if (optionId === -1) {
-          // "Other" option — store otherText
-          await db.insert(responseAnswers).values({
+          answersToInsert.push({
             responseId: responseRecord.id,
             questionId: question.id,
             optionId: null,
@@ -143,7 +142,7 @@ export async function POST(req: NextRequest) {
             freeText: null,
           });
         } else {
-          await db.insert(responseAnswers).values({
+          answersToInsert.push({
             responseId: responseRecord.id,
             questionId: question.id,
             optionId: optionId,
@@ -154,14 +153,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Update session progress
-    await db
-      .update(surveySessions)
-      .set({
-        currentQuestionIndex: question.orderIndex,
-        lastActivityAt: new Date().toISOString(),
-      })
-      .where(eq(surveySessions.id, session.id));
+    // 7. Insert answers in a single batch query AND update session in parallel
+    const operations: Promise<unknown>[] = [
+      db
+        .update(surveySessions)
+        .set({
+          currentQuestionIndex: question.orderIndex,
+          lastActivityAt: new Date().toISOString(),
+        })
+        .where(eq(surveySessions.id, session.id)),
+    ];
+
+    if (answersToInsert.length > 0) {
+      operations.push(db.insert(responseAnswers).values(answersToInsert));
+    }
+
+    await Promise.all(operations);
 
     return NextResponse.json({
       success: true,

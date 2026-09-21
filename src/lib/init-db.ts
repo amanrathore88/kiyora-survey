@@ -2,12 +2,26 @@ import { client, db } from "./db";
 import * as schema from "./schema";
 import { hashPassword } from "./auth";
 
+let isDbReady = false;
 let initPromise: Promise<void> | null = null;
 
 export async function ensureDatabaseReady(): Promise<void> {
+  if (isDbReady) return;
   if (!initPromise) {
     initPromise = (async () => {
       try {
+        // Fast-path: Check if questions table already exists and has data in 1 quick query
+        try {
+          const quickCheck = await client.execute("SELECT count(*) as count FROM questions");
+          const count = Number(quickCheck.rows[0]?.count || 0);
+          if (count > 0) {
+            isDbReady = true;
+            return;
+          }
+        } catch {
+          // Table doesn't exist yet, proceed to create tables below
+        }
+
         // 1. Check if questions table exists
         const tableCheck = await client.execute(
           "SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name='questions'"
@@ -152,6 +166,7 @@ export async function ensureDatabaseReady(): Promise<void> {
         } else {
           // Database already has questions — keep everything 100% intact!
         }
+        isDbReady = true;
       } catch (err) {
         console.warn("Auto-initialization check:", err);
       }
