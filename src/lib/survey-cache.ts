@@ -26,6 +26,8 @@ export interface CachedQuestion {
   maxSelections: number | null;
   hasOtherOption: boolean;
   conditionalLogic: string | null;
+  isExitPoint: boolean;
+  exitLogic: string | null;
   researcherNote: string | null;
   orderIndex: number;
   isActive: boolean;
@@ -107,6 +109,8 @@ export async function getCachedSurveyQuestions(): Promise<CachedQuestion[]> {
       maxSelections: q.maxSelections,
       hasOtherOption: q.hasOtherOption,
       conditionalLogic: q.conditionalLogic,
+      isExitPoint: Boolean(q.isExitPoint),
+      exitLogic: q.exitLogic || null,
       researcherNote: q.researcherNote,
       orderIndex: q.orderIndex,
       isActive: q.isActive,

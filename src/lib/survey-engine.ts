@@ -1,4 +1,4 @@
-import type { ConditionalLogic } from "./types";
+import type { ConditionalLogic, ExitLogic } from "./types";
 
 interface AnswerMap {
   [questionNumber: string]: {
@@ -46,6 +46,51 @@ export function shouldShowQuestion(
     return true;
   } catch {
     return true; // If parsing fails, show the question
+  }
+}
+
+/**
+ * Evaluates whether the survey form should immediately close/exit after this question
+ * based on whether isExitPoint is enabled and optional conditional exit rules.
+ */
+export function shouldExitSurvey(
+  isExitPoint: boolean | null | undefined,
+  exitLogicJson: string | null | undefined,
+  answersMap: AnswerMap
+): boolean {
+  if (!isExitPoint) return false;
+  if (!exitLogicJson) return true; // Unconditional exit point
+
+  try {
+    const logic: ExitLogic = JSON.parse(exitLogicJson);
+    if (logic.type === "always") return true;
+
+    if (logic.type === "exit_if" && logic.conditions && logic.conditions.length > 0) {
+      for (const condition of logic.conditions) {
+        const answer = answersMap[condition.questionNumber];
+        if (!answer) return false;
+
+        switch (condition.operator) {
+          case "includes_option":
+            if (!answer.selectedOptions.includes(condition.value)) return false;
+            break;
+          case "equals_option":
+            if (
+              answer.selectedOptions.length !== 1 ||
+              answer.selectedOptions[0] !== condition.value
+            )
+              return false;
+            break;
+          default:
+            return false;
+        }
+      }
+      return true;
+    }
+
+    return true;
+  } catch {
+    return true;
   }
 }
 

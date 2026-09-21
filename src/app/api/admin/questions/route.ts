@@ -96,6 +96,8 @@ export async function POST(req: NextRequest) {
       minSelections,
       maxSelections,
       hasOtherOption,
+      isExitPoint,
+      exitLogic,
       options = [],
     } = body;
 
@@ -135,6 +137,8 @@ export async function POST(req: NextRequest) {
         minSelections: questionType === "checkbox" ? (minSelections ? Number(minSelections) : null) : null,
         maxSelections: questionType === "checkbox" ? (maxSelections ? Number(maxSelections) : null) : null,
         hasOtherOption: !!hasOtherOption,
+        isExitPoint: Boolean(isExitPoint),
+        exitLogic: exitLogic ? String(exitLogic) : null,
         isActive: true,
         currentRevision: 1,
       })
@@ -192,6 +196,8 @@ export async function PUT(req: NextRequest) {
       minSelections,
       maxSelections,
       hasOtherOption,
+      isExitPoint,
+      exitLogic,
       options,
       changeReason,
     } = await req.json();
@@ -236,6 +242,15 @@ export async function PUT(req: NextRequest) {
           : null
         : null;
 
+    const updatedIsExitPoint =
+      isExitPoint !== undefined ? Boolean(isExitPoint) : currentQ.isExitPoint;
+    const updatedExitLogic =
+      exitLogic !== undefined
+        ? exitLogic
+          ? String(exitLogic)
+          : null
+        : currentQ.exitLogic;
+
     if (hasResponses) {
       // Create new revision — never destructively change historical data
       newRevision = currentQ.currentRevision + 1;
@@ -261,6 +276,8 @@ export async function PUT(req: NextRequest) {
           minSelections: updatedMin,
           maxSelections: updatedMax,
           hasOtherOption: hasOtherOption !== undefined ? !!hasOtherOption : currentQ.hasOtherOption,
+          isExitPoint: updatedIsExitPoint,
+          exitLogic: updatedExitLogic,
           updatedAt: new Date().toISOString(),
         })
         .where(eq(questions.id, questionId));
@@ -276,6 +293,8 @@ export async function PUT(req: NextRequest) {
           minSelections: updatedMin,
           maxSelections: updatedMax,
           hasOtherOption: hasOtherOption !== undefined ? !!hasOtherOption : currentQ.hasOtherOption,
+          isExitPoint: updatedIsExitPoint,
+          exitLogic: updatedExitLogic,
           updatedAt: new Date().toISOString(),
         })
         .where(eq(questions.id, questionId));
@@ -359,6 +378,21 @@ export async function PATCH(req: NextRequest) {
         .update(questions)
         .set({ orderIndex: newOrderIndex })
         .where(eq(questions.id, questionId));
+    } else if (action === "toggle_exit_point") {
+      const [q] = await db
+        .select()
+        .from(questions)
+        .where(eq(questions.id, questionId));
+      if (q) {
+        const nextIsExit = !q.isExitPoint;
+        await db
+          .update(questions)
+          .set({
+            isExitPoint: nextIsExit,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(questions.id, questionId));
+      }
     }
 
     invalidateSurveyCache();

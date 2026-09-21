@@ -47,6 +47,8 @@ interface QuestionSeedData {
   maxSelections?: number;
   hasOtherOption?: boolean;
   conditionalLogic?: string;
+  isExitPoint?: boolean;
+  exitLogic?: string;
   researcherNote?: string;
   options: string[];
 }
@@ -56,6 +58,17 @@ async function seed() {
     url: process.env.DATABASE_URL || "file:./kiyora-survey.db",
   });
   const db = drizzle(client, { schema });
+
+  try {
+    await client.execute("ALTER TABLE questions ADD COLUMN is_exit_point integer DEFAULT 0 NOT NULL");
+  } catch {
+    // column already exists
+  }
+  try {
+    await client.execute("ALTER TABLE questions ADD COLUMN exit_logic text");
+  } catch {
+    // column already exists
+  }
 
   console.log("Clearing existing data...");
   await db.run(sql`DELETE FROM response_answers`);
@@ -275,6 +288,17 @@ async function seed() {
       questionType: "checkbox",
       maxSelections: 3,
       hasOtherOption: true,
+      isExitPoint: true,
+      exitLogic: JSON.stringify({
+        type: "exit_if",
+        conditions: [
+          {
+            questionNumber: "Q10",
+            operator: "equals_option",
+            value: "No",
+          },
+        ],
+      }),
       options: [
         "High outdoor pollution / AQI",
         "Cleaner indoor air",
@@ -571,6 +595,8 @@ async function seed() {
         maxSelections: qFields.maxSelections || null,
         hasOtherOption: qFields.hasOtherOption || false,
         conditionalLogic: qFields.conditionalLogic || null,
+        isExitPoint: qFields.isExitPoint || false,
+        exitLogic: qFields.exitLogic || null,
         researcherNote: qFields.researcherNote || null,
         orderIndex: qFields.orderIndex,
         isActive: true,

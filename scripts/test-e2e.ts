@@ -1,7 +1,7 @@
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "../src/lib/schema";
-import { shouldShowQuestion, validateResearchSequence, purchaseIntentScore, calculateIntentShift } from "../src/lib/survey-engine";
+import { shouldShowQuestion, shouldExitSurvey, validateResearchSequence, purchaseIntentScore, calculateIntentShift } from "../src/lib/survey-engine";
 import { verifyPassword } from "../src/lib/auth";
 import { generateCSV } from "../src/lib/csv-export";
 import { eq, asc, and, gt } from "drizzle-orm";
@@ -381,6 +381,46 @@ async function runTests() {
 
   // Clean up test session
   await db.delete(schema.surveySessions).where(eq(schema.surveySessions.id, pauseSession.id));
+
+  // ----------------------------------------------------
+  // TEST 14: Verifying Question Exit Point & Q10/Q11 Conditional Exit Flow
+  // ----------------------------------------------------
+  console.log("\n🚪 14. Verifying Question Exit Point & Q10/Q11 Conditional Exit Flow...");
+  const [q11Record] = await db.select().from(schema.questions).where(eq(schema.questions.questionNumber, "Q11"));
+  assert(Boolean(q11Record?.isExitPoint), "Q11 is configured with isExitPoint = true");
+  assert(
+    Boolean(q11Record?.exitLogic?.includes('"questionNumber":"Q10"') && q11Record?.exitLogic?.includes('"value":"No"')),
+    "Q11 exit logic checks if Q10 equals 'No'"
+  );
+
+  // Condition 1: Q10 is "No" -> Q11 triggers survey exit
+  const noAnswersMap = {
+    Q10: { selectedOptions: ["No"] },
+  };
+  const shouldExitOnNo = shouldExitSurvey(q11Record.isExitPoint, q11Record.exitLogic, noAnswersMap);
+  assert(shouldExitOnNo === true, "When Q10 is 'No', Q11 triggers survey exit (form closes automatically)");
+
+  // Condition 2: Q10 is "Yes" -> Q11 does NOT trigger exit, continues
+  const yesAnswersMap = {
+    Q10: { selectedOptions: ["Yes"] },
+  };
+  const shouldExitOnYes = shouldExitSurvey(q11Record.isExitPoint, q11Record.exitLogic, yesAnswersMap);
+  assert(shouldExitOnYes === false, "When Q10 is 'Yes', survey continues to subsequent questions");
+
+  // Condition 3: Q10 is "Maybe" -> Q11 does NOT trigger exit, continues
+  const maybeAnswersMap = {
+    Q10: { selectedOptions: ["Maybe"] },
+  };
+  const shouldExitOnMaybe = shouldExitSurvey(q11Record.isExitPoint, q11Record.exitLogic, maybeAnswersMap);
+  assert(shouldExitOnMaybe === false, "When Q10 is 'Maybe', survey continues to subsequent questions");
+
+  // Condition 4: Unconditional exit point
+  const unconditionalExit = shouldExitSurvey(true, JSON.stringify({ type: "always" }), {});
+  assert(unconditionalExit === true, "Unconditional exit point always triggers survey exit");
+
+  // Condition 5: Normal non-exit question
+  const nonExitQuestion = shouldExitSurvey(false, null, {});
+  assert(nonExitQuestion === false, "Regular non-exit question does not trigger exit");
 
   console.log("\n==================================================");
   console.log(`🏁 TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`);

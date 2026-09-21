@@ -76,6 +76,8 @@ export async function ensureDatabaseReady(): Promise<void> {
               max_selections integer,
               has_other_option integer DEFAULT false NOT NULL,
               conditional_logic text,
+              is_exit_point integer DEFAULT false NOT NULL,
+              exit_logic text,
               researcher_note text,
               order_index integer NOT NULL,
               is_active integer DEFAULT true NOT NULL,
@@ -230,6 +232,48 @@ export async function ensureDatabaseReady(): Promise<void> {
           } catch (q10Err) {
             console.warn("Q10 migration error:", q10Err);
           }
+
+          // Ensure is_exit_point and exit_logic columns exist on questions table
+          try {
+            await client.execute("ALTER TABLE questions ADD COLUMN is_exit_point integer DEFAULT 0 NOT NULL");
+          } catch {
+            // column already exists
+          }
+          try {
+            await client.execute("ALTER TABLE questions ADD COLUMN exit_logic text");
+          } catch {
+            // column already exists
+          }
+
+          // Ensure Q11 has the exit point rule configured if not set yet:
+          // If Q10 = 'No', exit survey after Q11.
+          try {
+            const checkQ11 = await client.execute(
+              "SELECT id, is_exit_point, exit_logic FROM questions WHERE question_number = 'Q11' OR order_index = 11"
+            );
+            if (checkQ11.rows.length > 0) {
+              const row = checkQ11.rows[0];
+              if (!row.is_exit_point || !row.exit_logic) {
+                const defaultQ11ExitLogic = JSON.stringify({
+                  type: "exit_if",
+                  conditions: [
+                    {
+                      questionNumber: "Q10",
+                      operator: "equals_option",
+                      value: "No",
+                    },
+                  ],
+                });
+                await client.execute({
+                  sql: "UPDATE questions SET is_exit_point = 1, exit_logic = ? WHERE id = ?",
+                  args: [defaultQ11ExitLogic, row.id],
+                });
+                console.log("Q11 conditional exit rule applied.");
+              }
+            }
+          } catch (exitErr) {
+            console.warn("Exit logic migration error:", exitErr);
+          }
         }
         isDbReady = true;
       } catch (err) {
@@ -317,7 +361,7 @@ async function autoSeed() {
     { sectionId: sec["B"], questionNumber: "Q8", orderIndex: 8, questionText: "How concerned are you about indoor air quality and pollution inside your home?", questionType: "radio" as const, options: ["Very concerned", "Somewhat concerned", "Neutral", "Not very concerned", "Not concerned at all"] },
     { sectionId: sec["B"], questionNumber: "Q9", orderIndex: 9, questionText: "Do you currently own or regularly use an air purifier at home?", questionType: "radio" as const, options: ["Yes", "No", "Used one previously"] },
     { sectionId: sec["B"], questionNumber: "Q10", orderIndex: 10, questionText: "Considering the current severity of air pollution, do you feel the need to own an air purifier in the near future?", questionType: "radio" as const, options: ["Yes", "No", "Maybe"] },
-    { sectionId: sec["B"], questionNumber: "Q11", orderIndex: 11, questionText: "What would be the main reasons for you to consider an air purifier? (Select up to 3)", questionType: "checkbox" as const, maxSelections: 3, hasOtherOption: true, options: ["High outdoor pollution / AQI", "Cleaner indoor air", "Children's health", "Elderly family members", "Dust / allergy concerns", "Smoke / odour", "General preventive health / wellness", "I do not see a need"] },
+    { sectionId: sec["B"], questionNumber: "Q11", orderIndex: 11, questionText: "What would be the main reasons for you to consider an air purifier? (Select up to 3)", questionType: "checkbox" as const, maxSelections: 3, hasOtherOption: true, isExitPoint: true, exitLogic: JSON.stringify({ type: "exit_if", conditions: [{ questionNumber: "Q10", operator: "equals_option", value: "No" }] }), options: ["High outdoor pollution / AQI", "Cleaner indoor air", "Children's health", "Elderly family members", "Dust / allergy concerns", "Smoke / odour", "General preventive health / wellness", "I do not see a need"] },
     { sectionId: sec["B"], questionNumber: "Q12", orderIndex: 12, questionText: "If you would NOT consider buying an air purifier, what is the main reason?", questionType: "radio" as const, hasOtherOption: true, conditionalLogic: '{"type":"show_if","conditions":[{"questionNumber":"Q11","operator":"includes_option","value":"I do not see a need"}],"fallback":"skip"}', researcherNote: "If respondent is clearly not interested, continue with profile/brand perception questions as useful; do not force purchase-intent answers.", options: ["Too expensive", "Do not think I need one", "Do not know enough about air purifiers", "Do not trust their effectiveness", "Filter / maintenance cost", "Already have one"] },
     { sectionId: sec["C"], questionNumber: "Q13", orderIndex: 13, questionText: "Which THREE factors matter most when choosing an air purifier?", questionType: "checkbox" as const, minSelections: 3, maxSelections: 3, options: ["Air-cleaning performance / CADR", "Price", "Filter quality / HEPA filtration", "Annual filter & maintenance cost", "Brand trust", "Low noise", "Design / appearance", "Room coverage", "Air-quality display / smart features", "Warranty & after-sales service"] },
     { sectionId: sec["C"], questionNumber: "Q14", orderIndex: 14, questionText: "Before seeing any Kiyoki concept, what price would you personally consider reasonable for a good air purifier for your home?", questionType: "radio" as const, options: ["Below ₹8,000", "₹8,000-9,999", "₹10,000-11,999", "₹12,000-14,999", "₹15,000-19,999", "₹20,000+"] },
@@ -348,6 +392,8 @@ async function autoSeed() {
         maxSelections: "maxSelections" in q ? q.maxSelections : null,
         hasOtherOption: "hasOtherOption" in q ? Boolean(q.hasOtherOption) : false,
         conditionalLogic: "conditionalLogic" in q ? q.conditionalLogic : null,
+        isExitPoint: "isExitPoint" in q ? Boolean(q.isExitPoint) : false,
+        exitLogic: "exitLogic" in q ? (q.exitLogic as string) : null,
         researcherNote: "researcherNote" in q ? q.researcherNote : null,
         isActive: true,
         currentRevision: 1,

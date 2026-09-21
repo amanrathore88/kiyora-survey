@@ -66,6 +66,10 @@ export const questions = sqliteTable("questions", {
     .notNull()
     .default(false),
   conditionalLogic: text("conditional_logic"),
+  isExitPoint: integer("is_exit_point", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  exitLogic: text("exit_logic"),
   researcherNote: text("researcher_note"),
   orderIndex: integer("order_index").notNull(),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),

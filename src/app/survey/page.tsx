@@ -16,7 +16,7 @@ import {
   getTranslatedQuestion,
   getTranslatedSection,
 } from "@/lib/translations";
-import { shouldShowQuestion } from "@/lib/survey-engine";
+import { shouldShowQuestion, shouldExitSurvey } from "@/lib/survey-engine";
 
 interface QuestionOption {
   id: number;
@@ -33,6 +33,8 @@ interface QuestionData {
   maxSelections: number | null;
   hasOtherOption: boolean;
   conditionalLogic?: string | null;
+  isExitPoint?: boolean;
+  exitLogic?: string | null;
   orderIndex: number;
   options: QuestionOption[];
   section: {
@@ -451,7 +453,26 @@ export default function SurveyPage() {
       }).catch((err) => console.error("Background answer save error:", err));
     }
 
-    // 3. Find next question in memory instantly (0ms)
+    // 3. Check if this question triggers an exit from the survey
+    const currentAnswersMap = getAnswersMap();
+    if (shouldExitSurvey(question.isExitPoint, question.exitLogic, currentAnswersMap)) {
+      setSubmitting(true);
+      if (currentToken) {
+        try {
+          await fetch("/api/survey/complete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionToken: currentToken }),
+          });
+        } catch {
+          // ignore
+        }
+      }
+      router.push("/thank-you");
+      return;
+    }
+
+    // 4. Find next question in memory instantly (0ms)
     const { targetIndex: nextIdx, question: nextQ } = getNextValidQuestionIndex(
       currentIndex + 1,
       1
@@ -548,6 +569,25 @@ export default function SurveyPage() {
           currentIndex,
         }),
       }).catch((err) => console.error("Background skip error:", err));
+    }
+
+    // Check if skipping this question triggers an exit from the survey
+    const currentAnswersMap = getAnswersMap();
+    if (shouldExitSurvey(question.isExitPoint, question.exitLogic, currentAnswersMap)) {
+      setSkipping(true);
+      if (currentToken) {
+        try {
+          await fetch("/api/survey/complete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionToken: currentToken }),
+          });
+        } catch {
+          // ignore
+        }
+      }
+      router.push("/thank-you");
+      return;
     }
 
     // Find next question in memory instantly (0ms)

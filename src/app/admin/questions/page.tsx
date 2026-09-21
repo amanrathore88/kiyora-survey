@@ -27,6 +27,8 @@ type Question = {
   minSelections: number | null;
   maxSelections: number | null;
   hasOtherOption: boolean;
+  isExitPoint?: boolean;
+  exitLogic?: string | null;
   isActive: boolean;
   currentRevision: number;
   options?: QuestionOptionItem[];
@@ -43,6 +45,10 @@ type QuestionFormState = {
   minSelections: string;
   maxSelections: string;
   hasOtherOption: boolean;
+  isExitPoint: boolean;
+  exitType: 'always' | 'conditional';
+  exitTriggerQuestion: string;
+  exitTriggerValue: string;
   options: string[];
   changeReason: string;
 };
@@ -55,6 +61,10 @@ const DEFAULT_FORM: QuestionFormState = {
   minSelections: '',
   maxSelections: '',
   hasOtherOption: false,
+  isExitPoint: false,
+  exitType: 'always',
+  exitTriggerQuestion: 'Q10',
+  exitTriggerValue: 'No',
   options: ['', ''],
   changeReason: '',
 };
@@ -153,6 +163,23 @@ export default function QuestionsPage() {
 
   const handleOpenEdit = (q: Question) => {
     setActiveQuestion(q);
+    let exitType: 'always' | 'conditional' = 'always';
+    let exitTriggerQuestion = 'Q10';
+    let exitTriggerValue = 'No';
+
+    if (q.exitLogic) {
+      try {
+        const parsed = JSON.parse(q.exitLogic);
+        if (parsed.type === 'exit_if' && parsed.conditions && parsed.conditions.length > 0) {
+          exitType = 'conditional';
+          exitTriggerQuestion = parsed.conditions[0].questionNumber || 'Q10';
+          exitTriggerValue = parsed.conditions[0].value || 'No';
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     setForm({
       sectionId: q.sectionId,
       questionNumber: q.questionNumber,
@@ -161,6 +188,10 @@ export default function QuestionsPage() {
       minSelections: q.minSelections ? String(q.minSelections) : '',
       maxSelections: q.maxSelections ? String(q.maxSelections) : '',
       hasOtherOption: q.hasOtherOption,
+      isExitPoint: Boolean(q.isExitPoint),
+      exitType,
+      exitTriggerQuestion,
+      exitTriggerValue,
       options: q.options?.map((o) => o.optionText) || ['', ''],
       changeReason: '',
     });
@@ -205,6 +236,21 @@ export default function QuestionsPage() {
       }
     }
 
+    const exitLogicString = form.isExitPoint
+      ? form.exitType === 'always'
+        ? JSON.stringify({ type: 'always' })
+        : JSON.stringify({
+            type: 'exit_if',
+            conditions: [
+              {
+                questionNumber: form.exitTriggerQuestion.trim() || 'Q10',
+                operator: 'equals_option',
+                value: form.exitTriggerValue.trim() || 'No',
+              },
+            ],
+          })
+      : null;
+
     if (modalMode === 'edit' && activeQuestion) {
       if (activeQuestion.hasResponses && !form.changeReason.trim()) {
         alert('Please enter a reason for the change, as this question already has responses.');
@@ -225,6 +271,8 @@ export default function QuestionsPage() {
             minSelections: form.minSelections ? Number(form.minSelections) : null,
             maxSelections: form.maxSelections ? Number(form.maxSelections) : null,
             hasOtherOption: form.hasOtherOption,
+            isExitPoint: form.isExitPoint,
+            exitLogic: exitLogicString,
             options: form.options.filter((o) => o.trim().length > 0),
             changeReason: form.changeReason.trim() || 'Admin update',
           }),
@@ -250,6 +298,8 @@ export default function QuestionsPage() {
             minSelections: form.minSelections ? Number(form.minSelections) : null,
             maxSelections: form.maxSelections ? Number(form.maxSelections) : null,
             hasOtherOption: form.hasOtherOption,
+            isExitPoint: form.isExitPoint,
+            exitLogic: exitLogicString,
             options: form.options.filter((o) => o.trim().length > 0),
           }),
         });
@@ -347,6 +397,24 @@ export default function QuestionsPage() {
                             + Other Input
                           </span>
                         )}
+                        {q.isExitPoint && (
+                          <span className="text-xs bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded font-semibold flex items-center gap-1">
+                            <span>🚪</span>
+                            <span>
+                              {q.exitLogic && q.exitLogic.includes('"exit_if"')
+                                ? `Exit Point (${(() => {
+                                    try {
+                                      const l = JSON.parse(q.exitLogic);
+                                      const c = l.conditions?.[0];
+                                      return c ? `if ${c.questionNumber}="${c.value}"` : 'Conditional';
+                                    } catch {
+                                      return 'Conditional';
+                                    }
+                                  })()})`
+                                : 'Exit Point (Always)'}
+                            </span>
+                          </span>
+                        )}
                       </div>
 
                       <h3 className="text-sm font-semibold text-gray-900 leading-snug break-words">{q.questionText}</h3>
@@ -383,6 +451,19 @@ export default function QuestionsPage() {
 
                     {/* Action buttons with full mobile responsiveness */}
                     <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => handleAction(q.id, 'toggle_exit_point')}
+                        className={`px-2 sm:px-2.5 py-1.5 text-xs font-semibold border rounded-lg transition shadow-xs cursor-pointer flex items-center gap-1 ${
+                          q.isExitPoint
+                            ? 'border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700'
+                            : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600'
+                        }`}
+                        title={q.isExitPoint ? "Click to deactivate exit point" : "Click to set as exit point"}
+                      >
+                        <span>🚪</span>
+                        <span>{q.isExitPoint ? 'Exit Active' : 'Set Exit'}</span>
+                      </button>
                       <button
                         onClick={() => idx > 0 && handleAction(q.id, 'reorder', questions[idx - 1].orderIndex)}
                         disabled={idx === 0}
@@ -660,6 +741,85 @@ export default function QuestionsPage() {
                   </span>
                 </label>
               )}
+
+              {/* Exit Point Configuration */}
+              <div className="bg-rose-50/70 p-3.5 rounded-xl border border-rose-200 space-y-3">
+                <label className="flex items-center space-x-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={form.isExitPoint}
+                    onChange={(e) => setForm({ ...form, isExitPoint: e.target.checked })}
+                    className="w-4 h-4 text-rose-600 rounded border-gray-300 focus:ring-rose-500"
+                  />
+                  <span className="text-xs font-bold text-rose-950 flex items-center gap-1.5">
+                    <span>🚪</span>
+                    <span>Set as Survey Exit Point (Form finishes after this question)</span>
+                  </span>
+                </label>
+
+                {form.isExitPoint && (
+                  <div className="pt-2.5 border-t border-rose-200/80 space-y-2.5">
+                    <p className="text-[11px] text-rose-900 font-medium leading-relaxed">
+                      Choose whether the survey always ends here or only when a specific respondent condition is met.
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-gray-800">
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="exitType"
+                          checked={form.exitType === 'always'}
+                          onChange={() => setForm({ ...form, exitType: 'always' })}
+                          className="text-rose-600 focus:ring-rose-500"
+                        />
+                        <span>Always Exit</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="exitType"
+                          checked={form.exitType === 'conditional'}
+                          onChange={() => setForm({ ...form, exitType: 'conditional' })}
+                          className="text-rose-600 focus:ring-rose-500"
+                        />
+                        <span>Conditional Exit</span>
+                      </label>
+                    </div>
+
+                    {form.exitType === 'conditional' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-white p-3 rounded-lg border border-rose-200 shadow-xs">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                            Trigger Question Identifier
+                          </label>
+                          <input
+                            type="text"
+                            value={form.exitTriggerQuestion}
+                            onChange={(e) => setForm({ ...form, exitTriggerQuestion: e.target.value })}
+                            placeholder="e.g. Q10"
+                            className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-rose-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                            Exit if Answer Equals
+                          </label>
+                          <input
+                            type="text"
+                            value={form.exitTriggerValue}
+                            onChange={(e) => setForm({ ...form, exitTriggerValue: e.target.value })}
+                            placeholder="e.g. No"
+                            className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-rose-500"
+                          />
+                        </div>
+                        <p className="text-[11px] text-gray-600 col-span-full font-medium">
+                          Rule: If respondent answered &quot;{form.exitTriggerValue || '...'}&quot; on {form.exitTriggerQuestion || '...'}, the survey will automatically complete right after this question.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Options Editor (for MCQ and MSQ) */}
               {form.questionType !== 'text' && (

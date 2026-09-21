@@ -8,6 +8,8 @@ export interface SurveyQuestion {
   maxSelections: number | null;
   hasOtherOption: boolean;
   conditionalLogic: ConditionalLogic | null;
+  isExitPoint: boolean;
+  exitLogic: ExitLogic | null;
   researcherNote: string | null;
   orderIndex: number;
   isActive: boolean;
@@ -42,6 +44,17 @@ export interface ConditionalLogic {
 }
 
 export interface ConditionalCondition {
+  questionNumber: string;
+  operator: "includes_option" | "equals_option";
+  value: string;
+}
+
+export interface ExitLogic {
+  type: "always" | "exit_if";
+  conditions?: ExitCondition[];
+}
+
+export interface ExitCondition {
   questionNumber: string;
   operator: "includes_option" | "equals_option";
   value: string;
