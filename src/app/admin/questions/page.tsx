@@ -70,6 +70,9 @@ export default function QuestionsPage() {
   const [modalMode, setModalMode] = useState<'edit' | 'add' | null>(null);
   const [activeQuestion, setActiveQuestion] = useState<Question | null>(null);
   const [form, setForm] = useState<QuestionFormState>(DEFAULT_FORM);
+  const [deleteConfirmQuestion, setDeleteConfirmQuestion] = useState<Question | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const fetchQuestions = useCallback(async () => {
     try {
@@ -109,6 +112,30 @@ export default function QuestionsPage() {
       fetchQuestions();
     } catch (error) {
       console.error('Failed to perform action', error);
+    }
+  };
+
+  const handleDeleteQuestion = async (questionId: number) => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/questions?id=${questionId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setDeleteConfirmQuestion(null);
+        setSuccessMessage(data.message || 'Question deleted successfully.');
+        setTimeout(() => setSuccessMessage(null), 4000);
+        fetchQuestions();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Failed to delete question.');
+      }
+    } catch (error) {
+      console.error('Failed to delete question', error);
+      alert('An error occurred while deleting question.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -288,6 +315,16 @@ export default function QuestionsPage() {
           </div>
         </div>
 
+        {/* Success alert */}
+        {successMessage && (
+          <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2">
+            <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span>{successMessage}</span>
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-12 text-gray-500 font-medium text-sm">Loading questions...</div>
         ) : (
@@ -305,13 +342,6 @@ export default function QuestionsPage() {
                             Sec {q.section.sectionKey}
                           </span>
                         )}
-                        <span
-                          className={`px-2 py-0.5 text-xs rounded-full font-medium ${
-                            q.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {q.isActive ? 'Active' : 'Inactive'}
-                        </span>
                         {q.hasOtherOption && (
                           <span className="text-xs bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded font-medium">
                             + Other Input
@@ -376,20 +406,92 @@ export default function QuestionsPage() {
                         Edit Question &amp; Options
                       </button>
                       <button
-                        onClick={() => handleAction(q.id, q.isActive ? 'deactivate' : 'reactivate')}
-                        className={`px-2.5 sm:px-3 py-1.5 text-xs font-semibold border rounded-lg transition cursor-pointer ${
-                          q.isActive
-                            ? 'border-red-300 text-red-700 hover:bg-red-50'
-                            : 'border-green-300 text-green-700 hover:bg-green-50'
-                        }`}
+                        type="button"
+                        onClick={() => setDeleteConfirmQuestion(q)}
+                        className="px-2.5 sm:px-3 py-1.5 text-xs font-semibold border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition shadow-xs cursor-pointer flex items-center gap-1"
+                        title="Delete Question"
                       >
-                        {q.isActive ? 'Deactivate' : 'Reactivate'}
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>Delete</span>
                       </button>
                     </div>
                   </div>
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {/* Delete Question Confirmation Modal */}
+        {deleteConfirmQuestion && (
+          <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-gray-100">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Delete Question?</h3>
+                  <p className="text-xs text-gray-500 font-semibold">{deleteConfirmQuestion.questionNumber} • {deleteConfirmQuestion.questionType.toUpperCase()}</p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-4">
+                <p className="text-xs font-semibold text-gray-900 line-clamp-2">
+                  {deleteConfirmQuestion.questionText}
+                </p>
+                {deleteConfirmQuestion.options && deleteConfirmQuestion.options.length > 0 && (
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    {deleteConfirmQuestion.options.length} options will be deleted
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-red-50/70 border border-red-200 rounded-xl p-3.5 mb-5 text-xs text-red-800 space-y-1.5 leading-relaxed">
+                <p className="font-semibold">⚠️ This will permanently remove:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-red-700">
+                  <li>This question and its options</li>
+                  <li>All revision history for this question</li>
+                  {deleteConfirmQuestion.hasResponses && (
+                    <li className="font-bold text-red-800">Any respondent answers recorded for this question</li>
+                  )}
+                  <li>Remaining questions will automatically be re-indexed seamlessly</li>
+                </ul>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setDeleteConfirmQuestion(null)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl text-xs font-semibold hover:bg-gray-100 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => handleDeleteQuestion(deleteConfirmQuestion.id)}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold transition shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <>
+                      <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <span>Permanently Delete</span>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>
