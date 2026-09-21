@@ -76,25 +76,23 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setSelectedLanguage("en")}
-              className={`py-3 px-4 rounded-xl font-semibold text-sm transition-all border flex items-center justify-center gap-2 ${
+              className={`py-3 px-4 rounded-xl font-semibold text-sm transition-all border flex items-center justify-center ${
                 selectedLanguage === "en"
                   ? "bg-[#1b2a4a] text-white border-[#1b2a4a] shadow-sm"
                   : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
               }`}
             >
-              <span className="text-base">🇬🇧</span>
               English
             </button>
             <button
               type="button"
               onClick={() => setSelectedLanguage("hi")}
-              className={`py-3 px-4 rounded-xl font-semibold text-sm transition-all border flex items-center justify-center gap-2 ${
+              className={`py-3 px-4 rounded-xl font-semibold text-sm transition-all border flex items-center justify-center ${
                 selectedLanguage === "hi"
                   ? "bg-[#1b2a4a] text-white border-[#1b2a4a] shadow-sm"
                   : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
               }`}
             >
-              <span className="text-base">🇮🇳</span>
               हिन्दी (Hindi)
             </button>
           </div>
