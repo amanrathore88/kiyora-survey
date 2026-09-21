@@ -94,6 +94,11 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     startNewSurvey: "Start a New Survey",
     needBreakPrompt: "Need a break?",
     orPrompt: "or",
+    skip: "Skip",
+    skipQuestion: "Skip Question",
+    skipping: "Skipping...",
+    skipThisQuestion: "Skip this question",
+    skipQuestionTooltip: "Skip this question and proceed to next",
   },
   hi: {
     surveyTitle: "कियोरा (KIYORA)",
@@ -178,6 +183,11 @@ export const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     startNewSurvey: "नया सर्वेक्षण शुरू करें",
     needBreakPrompt: "विराम की आवश्यकता है?",
     orPrompt: "या",
+    skip: "छोड़ें",
+    skipQuestion: "प्रश्न छोड़ें",
+    skipping: "छोड़ा जा रहा है...",
+    skipThisQuestion: "यह प्रश्न छोड़ें",
+    skipQuestionTooltip: "यह प्रश्न छोड़कर आगे बढ़ें",
   },
 };
 

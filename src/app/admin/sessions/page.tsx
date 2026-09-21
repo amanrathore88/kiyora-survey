@@ -21,6 +21,7 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'in_progress' | 'completed' | 'abandoned'>('all');
+  const [exporting, setExporting] = useState(false);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -57,6 +58,36 @@ export default function SessionsPage() {
     }
   };
 
+  const handleExportCSV = async () => {
+    setExporting(true);
+    try {
+      const statusParam = filter === 'all' ? 'completed' : filter;
+      const res = await fetch(`/api/admin/export?status=${statusParam}`);
+      if (res.status === 401) {
+        router.push('/admin/login');
+        return;
+      }
+      if (!res.ok) {
+        throw new Error('Export failed');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const timestamp = new Date().toISOString().split('T')[0];
+      link.download = `kiyora-survey-responses-${timestamp}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export CSV. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const filteredSessions = sessions.filter((s) => {
     if (filter === 'all') return true;
     return s.status === filter;
@@ -85,18 +116,44 @@ export default function SessionsPage() {
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Survey Sessions</h1>
             <p className="text-xs sm:text-sm text-gray-500">Track active respondent sessions, abandonment, and progress in real time.</p>
           </div>
-          <div className="flex flex-wrap gap-1 bg-white rounded-xl p-1 shadow-xs border border-gray-200 self-start sm:self-auto">
-            {(['all', 'in_progress', 'completed', 'abandoned'] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition cursor-pointer ${
-                  filter === f ? 'bg-[#1b2a4a] text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                {f.replace('_', ' ')}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            <div className="flex flex-wrap gap-1 bg-white rounded-xl p-1 shadow-xs border border-gray-200">
+              {(['all', 'in_progress', 'completed', 'abandoned'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition cursor-pointer ${
+                    filter === f ? 'bg-[#1b2a4a] text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {f.replace('_', ' ')}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={handleExportCSV}
+              disabled={exporting}
+              className="px-3.5 py-1.5 sm:py-2 bg-[#1b2a4a] hover:bg-[#2a3f6a] text-white text-xs sm:text-sm font-semibold rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Export response entries to CSV"
+            >
+              {exporting ? (
+                <>
+                  <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  <span>Exporting...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span>Export CSV</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 

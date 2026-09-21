@@ -61,6 +61,7 @@ export default function SurveyPage() {
   const [showConcept, setShowConcept] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [skipping, setSkipping] = useState(false);
   const [error, setError] = useState("");
   const [direction, setDirection] = useState(1);
 
@@ -316,6 +317,57 @@ export default function SurveyPage() {
       setError("Network error. Please try again.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSkip = async () => {
+    if (!question || submitting || skipping) return;
+    setSkipping(true);
+    setError("");
+
+    try {
+      const currentToken =
+        sessionToken || sessionStorage.getItem("kiyora_session");
+      if (!currentToken) {
+        router.push("/");
+        return;
+      }
+
+      // Record skip action and clear any stored answers for this question
+      await fetch("/api/survey/skip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionToken: currentToken,
+          questionId: question.id,
+          currentIndex,
+        }),
+      });
+
+      // Clear local answer history for this question
+      delete answersHistoryRef.current[question.id];
+      setAnswer({ selectedOptionIds: [], otherText: "", freeText: "" });
+
+      if (currentIndex >= totalQuestions) {
+        // Last question skipped, complete the survey
+        await fetch("/api/survey/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionToken: currentToken }),
+        });
+        router.push("/thank-you");
+      } else {
+        setDirection(1);
+        await fetchQuestion(currentIndex + 1, 1, true);
+      }
+    } catch (err) {
+      console.error("Error skipping question:", err);
+      if (currentIndex < totalQuestions) {
+        setDirection(1);
+        await fetchQuestion(currentIndex + 1, 1, true);
+      }
+    } finally {
+      setSkipping(false);
     }
   };
 
@@ -776,11 +828,11 @@ export default function SurveyPage() {
                 </div>
 
                 {/* Navigation Buttons */}
-                <div className="flex justify-between items-center mt-6">
+                <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 mt-6">
                   <button
                     onClick={handleBack}
-                    disabled={currentIndex <= 1 || submitting}
-                    className="px-6 py-2.5 text-gray-600 hover:text-[#1b2a4a] font-medium rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+                    disabled={currentIndex <= 1 || submitting || skipping}
+                    className="order-1 px-4 sm:px-6 py-2.5 text-gray-600 hover:text-[#1b2a4a] font-medium rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer text-xs sm:text-sm"
                   >
                     <svg
                       className="w-4 h-4"
@@ -797,59 +849,114 @@ export default function SurveyPage() {
                     </svg>
                     {t.back}
                   </button>
-                  <button
-                    onClick={handleNext}
-                    disabled={submitting}
-                    className="px-8 py-2.5 bg-[#1b2a4a] hover:bg-[#2d4a7a] text-white font-semibold rounded-xl transition-all shadow-sm hover:shadow disabled:opacity-50 flex items-center gap-2 cursor-pointer"
-                  >
-                    {submitting ? (
-                      <>
-                        <svg
-                          className="animate-spin h-4 w-4"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
+
+                  <div className="order-2 flex items-center gap-2 sm:gap-3 ml-auto">
+                    {/* Skip Question Button */}
+                    <button
+                      type="button"
+                      onClick={handleSkip}
+                      disabled={submitting || skipping}
+                      title={t.skipQuestionTooltip}
+                      className="px-3.5 sm:px-4 py-2.5 border border-gray-300 hover:border-gray-400 bg-white hover:bg-gray-50 text-gray-600 hover:text-[#1b2a4a] font-medium rounded-xl transition shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 cursor-pointer text-xs sm:text-sm"
+                    >
+                      {skipping ? (
+                        <>
+                          <svg
+                            className="animate-spin h-3.5 w-3.5"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              fill="none"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                            />
+                          </svg>
+                          <span>{t.skipping}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{t.skipQuestion}</span>
+                          <svg
+                            className="w-3.5 h-3.5 opacity-60"
                             fill="none"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                          />
-                        </svg>
-                        {t.saving}
-                      </>
-                    ) : currentIndex >= totalQuestions ? (
-                      t.completeSurvey
-                    ) : (
-                      <>
-                        {t.next}
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </>
-                    )}
-                  </button>
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                            />
+                          </svg>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Next / Complete Survey Button */}
+                    <button
+                      onClick={handleNext}
+                      disabled={submitting || skipping}
+                      className="px-6 sm:px-8 py-2.5 bg-[#1b2a4a] hover:bg-[#2d4a7a] text-white font-semibold rounded-xl transition-all shadow-sm hover:shadow disabled:opacity-50 flex items-center gap-2 cursor-pointer text-xs sm:text-sm"
+                    >
+                      {submitting ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              fill="none"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                            />
+                          </svg>
+                          {t.saving}
+                        </>
+                      ) : currentIndex >= totalQuestions ? (
+                        t.completeSurvey
+                      ) : (
+                        <>
+                          {t.next}
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Secondary Pause & Abandon Prompts */}
-                <div className="mt-8 text-center text-xs text-gray-500 flex items-center justify-center gap-2">
+                {/* Secondary Pause, Skip & Abandon Prompts */}
+                <div className="mt-8 text-center text-xs text-gray-500 flex flex-wrap items-center justify-center gap-2">
                   <span>{t.needBreakPrompt}</span>
                   <button
                     type="button"
@@ -858,7 +965,16 @@ export default function SurveyPage() {
                   >
                     {t.pauseSurvey}
                   </button>
-                  <span>•</span>
+                  <span className="text-gray-300">•</span>
+                  <button
+                    type="button"
+                    onClick={handleSkip}
+                    disabled={submitting || skipping}
+                    className="text-gray-500 hover:text-[#1b2a4a] hover:underline cursor-pointer"
+                  >
+                    {t.skipThisQuestion}
+                  </button>
+                  <span className="text-gray-300">•</span>
                   <button
                     type="button"
                     onClick={() => setShowAbandonModal(true)}

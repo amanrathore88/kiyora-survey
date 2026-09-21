@@ -103,14 +103,22 @@ interface QuestionAnswerData {
   freeTexts: string[];
 }
 
+export interface CSVExportOptions {
+  status?: string;
+  archiveFilter?: "all" | "active" | "archived";
+}
+
 /**
  * Generates a full CSV string with one row per completed respondent
  * with flattened answers suitable for Excel / Power BI.
  */
-export async function generateCSV(): Promise<string> {
-  // 1. Query all completed survey sessions
+export async function generateCSV(options?: CSVExportOptions): Promise<string> {
+  const statusFilter = options?.status || "completed";
+  const archiveFilter = options?.archiveFilter || "all";
+
+  // 1. Query survey sessions
   // 3. Also join respondent_contacts for name/contact
-  const completedSessions = await db
+  const baseQuery = db
     .select({
       session: surveySessions,
       contact: respondentContacts,
@@ -119,9 +127,14 @@ export async function generateCSV(): Promise<string> {
     .leftJoin(
       respondentContacts,
       eq(surveySessions.id, respondentContacts.sessionId)
-    )
-    .where(and(eq(surveySessions.status, "completed")))
-    .orderBy(asc(surveySessions.id));
+    );
+
+  const completedSessions =
+    statusFilter === "all"
+      ? await baseQuery.orderBy(asc(surveySessions.id))
+      : await baseQuery
+          .where(eq(surveySessions.status, statusFilter as "completed" | "in_progress" | "abandoned"))
+          .orderBy(asc(surveySessions.id));
 
   // Build CSV header row
   const headerRow = CSV_COLUMNS.map(escapeCSV).join(",");
@@ -195,6 +208,13 @@ export async function generateCSV(): Promise<string> {
       if (free && !qData.freeTexts.includes(free)) {
         qData.freeTexts.push(free);
       }
+    }
+
+    if (archiveFilter === "active" && isArchived) {
+      continue;
+    }
+    if (archiveFilter === "archived" && !isArchived) {
+      continue;
     }
 
     // Determine submitted_at timestamp
