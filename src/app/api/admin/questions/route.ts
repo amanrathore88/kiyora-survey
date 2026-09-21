@@ -19,55 +19,45 @@ export async function GET() {
 
   try {
     await ensureDatabaseReady();
-    const allSections = await db
-      .select()
-      .from(sections)
-      .orderBy(asc(sections.orderIndex));
 
-    const allQuestions = await db
-      .select()
-      .from(questions)
-      .orderBy(asc(questions.orderIndex));
+    const [allSections, allQuestions, allOptions, allRevisions, respondedQuestions] =
+      await Promise.all([
+        db.select().from(sections).orderBy(asc(sections.orderIndex)),
+        db.select().from(questions).orderBy(asc(questions.orderIndex)),
+        db.select().from(questionOptions).orderBy(asc(questionOptions.orderIndex)),
+        db.select({ id: questionRevisions.id, questionId: questionRevisions.questionId }).from(questionRevisions),
+        db.selectDistinct({ questionId: responses.questionId }).from(responses),
+      ]);
 
-    const questionsWithMeta = await Promise.all(
-      allQuestions.map(async (q) => {
-        // Get active options
-        const opts = await db
-          .select()
-          .from(questionOptions)
-          .where(
-            eq(questionOptions.questionId, q.id)
-          )
-          .orderBy(asc(questionOptions.orderIndex));
+    const respondedSet = new Set(respondedQuestions.map((r) => r.questionId));
 
-        // Filter active options
-        const activeOpts = opts.filter((o) => o.isActive);
+    const optionsMap = new Map<number, (typeof allOptions)[0][]>();
+    for (const opt of allOptions) {
+      if (!opt.isActive) continue;
+      const list = optionsMap.get(opt.questionId) || [];
+      list.push(opt);
+      optionsMap.set(opt.questionId, list);
+    }
 
-        // Check for responses
-        const resps = await db
-          .select({ id: responses.id })
-          .from(responses)
-          .where(eq(responses.questionId, q.id))
-          .limit(1);
+    const revisionCountMap = new Map<number, number>();
+    for (const rev of allRevisions) {
+      revisionCountMap.set(rev.questionId, (revisionCountMap.get(rev.questionId) || 0) + 1);
+    }
 
-        // Count revisions
-        const revs = await db
-          .select({ id: questionRevisions.id })
-          .from(questionRevisions)
-          .where(eq(questionRevisions.questionId, q.id));
+    const sectionMap = new Map<number, (typeof allSections)[0]>();
+    for (const sec of allSections) {
+      sectionMap.set(sec.id, sec);
+    }
 
-        // Get section info
-        const section = allSections.find((s) => s.id === q.sectionId) || null;
-
-        return {
-          ...q,
-          options: activeOpts,
-          section,
-          hasResponses: resps.length > 0,
-          revisionCount: revs.length,
-        };
-      })
-    );
+    const questionsWithMeta = allQuestions.map((q) => ({
+      ...q,
+      isExitPoint: Boolean(q.isExitPoint),
+      exitLogic: q.exitLogic || null,
+      options: optionsMap.get(q.id) || [],
+      section: sectionMap.get(q.sectionId) || null,
+      hasResponses: respondedSet.has(q.id),
+      revisionCount: revisionCountMap.get(q.id) || 1,
+    }));
 
     return NextResponse.json({
       questions: questionsWithMeta,
@@ -76,7 +66,7 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching questions:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
     );
   }

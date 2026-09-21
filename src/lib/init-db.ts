@@ -10,20 +10,6 @@ export async function ensureDatabaseReady(): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
       try {
-        // Fast-path: Check if questions table already exists and has Q10
-        try {
-          const quickCheck = await client.execute(
-            "SELECT count(*) as count FROM questions WHERE question_text LIKE '%severity of air pollution%'"
-          );
-          const count = Number(quickCheck.rows[0]?.count || 0);
-          if (count > 0) {
-            isDbReady = true;
-            return;
-          }
-        } catch {
-          // Table doesn't exist yet, proceed to create tables below
-        }
-
         // 1. Check if questions table exists
         const tableCheck = await client.execute(
           "SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name='questions'"

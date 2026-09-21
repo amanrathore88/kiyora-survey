@@ -83,16 +83,19 @@ export default function QuestionsPage() {
   const [deleteConfirmQuestion, setDeleteConfirmQuestion] = useState<Question | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchQuestions = useCallback(async () => {
+    setLoading(true);
+    setFetchError(null);
     try {
       const res = await fetch('/api/admin/questions');
       if (res.status === 401) {
         router.push('/admin/login');
         return;
       }
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
         const qList = Array.isArray(data)
           ? data
           : data.questions || data.data || [];
@@ -100,9 +103,13 @@ export default function QuestionsPage() {
         if (data.sections && Array.isArray(data.sections)) {
           setSections(data.sections);
         }
+      } else {
+        setFetchError(data.error || 'Failed to load questions from server.');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to fetch questions', error);
+      const errMsg = error instanceof Error ? error.message : 'Network error fetching questions.';
+      setFetchError(errMsg);
     } finally {
       setLoading(false);
     }
@@ -376,7 +383,35 @@ export default function QuestionsPage() {
         )}
 
         {loading ? (
-          <div className="text-center py-12 text-gray-500 font-medium text-sm">Loading questions...</div>
+          <div className="text-center py-12 text-gray-500 font-medium text-sm flex flex-col items-center justify-center gap-2.5">
+            <svg className="animate-spin h-6 w-6 text-[#1b2a4a]" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <span>Loading questions...</span>
+          </div>
+        ) : fetchError ? (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center my-4">
+            <p className="text-sm font-bold text-red-900 mb-1">Unable to Load Questions</p>
+            <p className="text-xs text-red-700 mb-4">{fetchError}</p>
+            <button
+              onClick={fetchQuestions}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl transition cursor-pointer"
+            >
+              Retry
+            </button>
+          </div>
+        ) : questions.length === 0 ? (
+          <div className="bg-white shadow-sm rounded-2xl p-12 text-center border border-gray-200">
+            <p className="text-sm font-semibold text-gray-700 mb-2">No Questions Found</p>
+            <p className="text-xs text-gray-500 mb-4">Click below to initialize or refresh questions from the database.</p>
+            <button
+              onClick={fetchQuestions}
+              className="px-4 py-2 bg-[#1b2a4a] hover:bg-[#2a3f6a] text-white text-xs font-semibold rounded-xl transition cursor-pointer"
+            >
+              Refresh Questions
+            </button>
+          </div>
         ) : (
           <div className="bg-white shadow-sm rounded-2xl overflow-hidden border border-gray-200">
             <ul className="divide-y divide-gray-200">
