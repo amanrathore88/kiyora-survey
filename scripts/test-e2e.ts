@@ -383,36 +383,52 @@ async function runTests() {
   await db.delete(schema.surveySessions).where(eq(schema.surveySessions.id, pauseSession.id));
 
   // ----------------------------------------------------
-  // TEST 14: Verifying Question Exit Point & Q10/Q11 Conditional Exit Flow
+  // TEST 14: Verifying Question Exit Point & Q10->Q12 Conditional Exit Flow
   // ----------------------------------------------------
-  console.log("\n🚪 14. Verifying Question Exit Point & Q10/Q11 Conditional Exit Flow...");
+  console.log("\n🚪 14. Verifying Question Exit Point & Q10->Q12 Conditional Exit Flow...");
+  const [q10Record] = await db.select().from(schema.questions).where(eq(schema.questions.questionNumber, "Q10"));
   const [q11Record] = await db.select().from(schema.questions).where(eq(schema.questions.questionNumber, "Q11"));
-  assert(Boolean(q11Record?.isExitPoint), "Q11 is configured with isExitPoint = true");
+  const [q12Record] = await db.select().from(schema.questions).where(eq(schema.questions.questionNumber, "Q12"));
+
+  assert(!Boolean(q11Record?.isExitPoint), "Q11 is NOT an exit point (isExitPoint = false)");
+  assert(Boolean(q12Record?.isExitPoint), "Q12 is configured with isExitPoint = true");
   assert(
-    Boolean(q11Record?.exitLogic?.includes('"questionNumber":"Q10"') && q11Record?.exitLogic?.includes('"value":"No"')),
-    "Q11 exit logic checks if Q10 equals 'No'"
+    Boolean(q12Record?.exitLogic?.includes('"questionNumber":"Q10"') && q12Record?.exitLogic?.includes('"value":"No"')),
+    "Q12 exit logic checks if Q10 equals 'No'"
   );
 
-  // Condition 1: Q10 is "No" -> Q11 triggers survey exit
+  // Condition 1: Q10 is "No" -> Q11 is skipped, direct Q12 is shown, Q12 triggers exit
   const noAnswersMap = {
     Q10: { selectedOptions: ["No"] },
   };
-  const shouldExitOnNo = shouldExitSurvey(q11Record.isExitPoint, q11Record.exitLogic, noAnswersMap);
-  assert(shouldExitOnNo === true, "When Q10 is 'No', Q11 triggers survey exit (form closes automatically)");
+  const q11ShownOnNo = shouldShowQuestion(q11Record.conditionalLogic, noAnswersMap);
+  assert(q11ShownOnNo === false, "When Q10 is 'No', Q11 is skipped");
 
-  // Condition 2: Q10 is "Yes" -> Q11 does NOT trigger exit, continues
+  const q12ShownOnNo = shouldShowQuestion(q12Record.conditionalLogic, noAnswersMap);
+  assert(q12ShownOnNo === true, "When Q10 is 'No', direct Q12 is shown");
+
+  const shouldExitOnNo = shouldExitSurvey(q12Record.isExitPoint, q12Record.exitLogic, noAnswersMap);
+  assert(shouldExitOnNo === true, "When Q10 is 'No', Q12 triggers survey exit (form closes automatically)");
+
+  // Condition 2: Q10 is "Yes" -> Q11 is shown, Q12 does NOT trigger exit, continues
   const yesAnswersMap = {
     Q10: { selectedOptions: ["Yes"] },
   };
-  const shouldExitOnYes = shouldExitSurvey(q11Record.isExitPoint, q11Record.exitLogic, yesAnswersMap);
-  assert(shouldExitOnYes === false, "When Q10 is 'Yes', survey continues to subsequent questions");
+  const q11ShownOnYes = shouldShowQuestion(q11Record.conditionalLogic, yesAnswersMap);
+  assert(q11ShownOnYes === true, "When Q10 is 'Yes', Q11 is shown");
 
-  // Condition 3: Q10 is "Maybe" -> Q11 does NOT trigger exit, continues
+  const shouldExitOnYes = shouldExitSurvey(q12Record.isExitPoint, q12Record.exitLogic, yesAnswersMap);
+  assert(shouldExitOnYes === false, "When Q10 is 'Yes', survey continues past Q12 to subsequent questions");
+
+  // Condition 3: Q10 is "Maybe" -> Q11 is shown, Q12 does NOT trigger exit, continues
   const maybeAnswersMap = {
     Q10: { selectedOptions: ["Maybe"] },
   };
-  const shouldExitOnMaybe = shouldExitSurvey(q11Record.isExitPoint, q11Record.exitLogic, maybeAnswersMap);
-  assert(shouldExitOnMaybe === false, "When Q10 is 'Maybe', survey continues to subsequent questions");
+  const q11ShownOnMaybe = shouldShowQuestion(q11Record.conditionalLogic, maybeAnswersMap);
+  assert(q11ShownOnMaybe === true, "When Q10 is 'Maybe', Q11 is shown");
+
+  const shouldExitOnMaybe = shouldExitSurvey(q12Record.isExitPoint, q12Record.exitLogic, maybeAnswersMap);
+  assert(shouldExitOnMaybe === false, "When Q10 is 'Maybe', survey continues past Q12 to subsequent questions");
 
   // Condition 4: Unconditional exit point
   const unconditionalExit = shouldExitSurvey(true, JSON.stringify({ type: "always" }), {});
@@ -421,6 +437,95 @@ async function runTests() {
   // Condition 5: Normal non-exit question
   const nonExitQuestion = shouldExitSurvey(false, null, {});
   assert(nonExitQuestion === false, "Regular non-exit question does not trigger exit");
+
+  // Condition 6: Verify Q12 response data persistence on exit
+  const exitSessionToken = "test_q12_exit_session_" + Date.now();
+  const [exitSession] = await db
+    .insert(schema.surveySessions)
+    .values({
+      surveyId: survey.id,
+      sessionToken: exitSessionToken,
+      status: "in_progress",
+      currentQuestionIndex: 10,
+      language: "en",
+      startedAt: new Date().toISOString(),
+      lastActivityAt: new Date().toISOString(),
+    })
+    .returning();
+
+  // Save Q10 answer = "No"
+  const [q10OptionNo] = await db
+    .select()
+    .from(schema.questionOptions)
+    .where(eq(schema.questionOptions.questionId, q10Record.id))
+    .limit(1);
+
+  const [q10Resp] = await db
+    .insert(schema.responses)
+    .values({
+      sessionId: exitSession.id,
+      questionId: q10Record.id,
+      questionRevision: 1,
+      submittedAt: new Date().toISOString(),
+      isArchived: false,
+    })
+    .returning();
+
+  await db.insert(schema.responseAnswers).values({
+    responseId: q10Resp.id,
+    questionId: q10Record.id,
+    optionId: q10OptionNo?.id || 1,
+    otherText: null,
+    freeText: null,
+  });
+
+  // Save Q12 answer before exit
+  const [q12Option] = await db
+    .select()
+    .from(schema.questionOptions)
+    .where(eq(schema.questionOptions.questionId, q12Record.id))
+    .limit(1);
+
+  const [q12Resp] = await db
+    .insert(schema.responses)
+    .values({
+      sessionId: exitSession.id,
+      questionId: q12Record.id,
+      questionRevision: 1,
+      submittedAt: new Date().toISOString(),
+      isArchived: false,
+    })
+    .returning();
+
+  await db.insert(schema.responseAnswers).values({
+    responseId: q12Resp.id,
+    questionId: q12Record.id,
+    optionId: q12Option?.id || 1,
+    otherText: null,
+    freeText: null,
+  });
+
+  // Complete session upon exit
+  await db
+    .update(schema.surveySessions)
+    .set({
+      status: "completed",
+      completedAt: new Date().toISOString(),
+    })
+    .where(eq(schema.surveySessions.id, exitSession.id));
+
+  // Verify Q12 response is included in the database
+  const savedQ12Response = await db
+    .select()
+    .from(schema.responses)
+    .where(and(eq(schema.responses.sessionId, exitSession.id), eq(schema.responses.questionId, q12Record.id)));
+  assert(savedQ12Response.length > 0, "Q12 response is recorded and not omitted from database on exit");
+
+  // Clean up exit session
+  await db.delete(schema.responseAnswers).where(eq(schema.responseAnswers.responseId, q10Resp.id));
+  await db.delete(schema.responseAnswers).where(eq(schema.responseAnswers.responseId, q12Resp.id));
+  await db.delete(schema.responses).where(eq(schema.responses.sessionId, exitSession.id));
+  await db.delete(schema.surveySessions).where(eq(schema.surveySessions.id, exitSession.id));
 
   console.log("\n==================================================");
   console.log(`🏁 TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`);

@@ -21,29 +21,42 @@ export function shouldShowQuestion(
   try {
     const logic: ConditionalLogic = JSON.parse(conditionalLogicJson);
 
-    if (logic.type !== "show_if") return true;
+    if (logic.type !== "show_if" || !logic.conditions || logic.conditions.length === 0) {
+      return true;
+    }
 
-    for (const condition of logic.conditions) {
+    const isMatchAny = logic.match === "any";
+
+    const evaluateCondition = (condition: {
+      questionNumber: string;
+      operator: string;
+      value: string;
+    }): boolean => {
       const answer = answersMap[condition.questionNumber];
       if (!answer) return false;
 
       switch (condition.operator) {
         case "includes_option":
-          if (!answer.selectedOptions.includes(condition.value)) return false;
-          break;
+          return answer.selectedOptions.includes(condition.value);
         case "equals_option":
-          if (
-            answer.selectedOptions.length !== 1 ||
-            answer.selectedOptions[0] !== condition.value
-          )
-            return false;
-          break;
+          return (
+            answer.selectedOptions.length === 1 &&
+            answer.selectedOptions[0] === condition.value
+          );
+        case "not_equals_option":
+          return !answer.selectedOptions.includes(condition.value);
+        case "not_includes_option":
+          return !answer.selectedOptions.includes(condition.value);
         default:
           return true;
       }
-    }
+    };
 
-    return true;
+    if (isMatchAny) {
+      return logic.conditions.some(evaluateCondition);
+    } else {
+      return logic.conditions.every(evaluateCondition);
+    }
   } catch {
     return true; // If parsing fails, show the question
   }

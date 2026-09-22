@@ -39,13 +39,14 @@ export interface SurveySection {
 
 export interface ConditionalLogic {
   type: "show_if";
+  match?: "all" | "any";
   conditions: ConditionalCondition[];
   fallback: "skip";
 }
 
 export interface ConditionalCondition {
   questionNumber: string;
-  operator: "includes_option" | "equals_option";
+  operator: "includes_option" | "equals_option" | "not_equals_option" | "not_includes_option";
   value: string;
 }
 

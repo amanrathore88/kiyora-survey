@@ -438,9 +438,10 @@ export default function SurveyPage() {
     // 1. Immediately record answer in local history
     answersHistoryRef.current[question.id] = { ...answerToSave };
 
-    // 2. Fire non-blocking background save to database
+    // 2. Prepare database save promise
+    let savePromise: Promise<Response> | null = null;
     if (currentToken) {
-      fetch("/api/survey/answer", {
+      savePromise = fetch("/api/survey/answer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -450,7 +451,9 @@ export default function SurveyPage() {
           otherText: answerToSave.otherText || undefined,
           freeText: answerToSave.freeText || undefined,
         }),
-      }).catch((err) => console.error("Background answer save error:", err));
+      });
+      // Catch in background for regular advancement so UI stays fast
+      savePromise.catch((err) => console.error("Background answer save error:", err));
     }
 
     // 3. Check if this question triggers an exit from the survey
@@ -459,6 +462,9 @@ export default function SurveyPage() {
       setSubmitting(true);
       if (currentToken) {
         try {
+          if (savePromise) {
+            await savePromise; // Crucial: Await answer save before marking session completed
+          }
           await fetch("/api/survey/complete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -483,6 +489,9 @@ export default function SurveyPage() {
       setSubmitting(true);
       if (currentToken) {
         try {
+          if (savePromise) {
+            await savePromise;
+          }
           await fetch("/api/survey/complete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -558,9 +567,10 @@ export default function SurveyPage() {
     delete answersHistoryRef.current[question.id];
     setAnswer({ selectedOptionIds: [], otherText: "", freeText: "" });
 
-    // Fire background non-blocking skip
+    // Prepare skip promise
+    let skipPromise: Promise<Response> | null = null;
     if (currentToken) {
-      fetch("/api/survey/skip", {
+      skipPromise = fetch("/api/survey/skip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -568,7 +578,8 @@ export default function SurveyPage() {
           questionId: question.id,
           currentIndex,
         }),
-      }).catch((err) => console.error("Background skip error:", err));
+      });
+      skipPromise.catch((err) => console.error("Background skip error:", err));
     }
 
     // Check if skipping this question triggers an exit from the survey
@@ -577,6 +588,9 @@ export default function SurveyPage() {
       setSkipping(true);
       if (currentToken) {
         try {
+          if (skipPromise) {
+            await skipPromise;
+          }
           await fetch("/api/survey/complete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -600,6 +614,9 @@ export default function SurveyPage() {
       setSubmitting(true);
       if (currentToken) {
         try {
+          if (skipPromise) {
+            await skipPromise;
+          }
           await fetch("/api/survey/complete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

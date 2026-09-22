@@ -231,32 +231,58 @@ export async function ensureDatabaseReady(): Promise<void> {
             // column already exists
           }
 
-          // Ensure Q11 has the exit point rule configured if not set yet:
-          // If Q10 = 'No', exit survey after Q11.
+          // Ensure Q11 and Q12 conditional logic and exit point rules are configured:
+          // If Q10 = 'No', direct Q12 appears and survey exits after Q12.
+          // If Q10 = 'Yes' or 'Maybe', Q11 appears and survey continues.
           try {
-            const checkQ11 = await client.execute(
-              "SELECT id, is_exit_point, exit_logic FROM questions WHERE question_number = 'Q11' OR order_index = 11"
-            );
-            if (checkQ11.rows.length > 0) {
-              const row = checkQ11.rows[0];
-              if (!row.is_exit_point || !row.exit_logic) {
-                const defaultQ11ExitLogic = JSON.stringify({
-                  type: "exit_if",
-                  conditions: [
-                    {
-                      questionNumber: "Q10",
-                      operator: "equals_option",
-                      value: "No",
-                    },
-                  ],
-                });
-                await client.execute({
-                  sql: "UPDATE questions SET is_exit_point = 1, exit_logic = ? WHERE id = ?",
-                  args: [defaultQ11ExitLogic, row.id],
-                });
-                console.log("Q11 conditional exit rule applied.");
-              }
-            }
+            const q11CondLogic = JSON.stringify({
+              type: "show_if",
+              conditions: [
+                {
+                  questionNumber: "Q10",
+                  operator: "not_equals_option",
+                  value: "No",
+                },
+              ],
+              fallback: "skip",
+            });
+            await client.execute({
+              sql: "UPDATE questions SET is_exit_point = 0, exit_logic = NULL, conditional_logic = ? WHERE question_number = 'Q11' OR order_index = 11",
+              args: [q11CondLogic],
+            });
+
+            const q12CondLogic = JSON.stringify({
+              type: "show_if",
+              match: "any",
+              conditions: [
+                {
+                  questionNumber: "Q10",
+                  operator: "equals_option",
+                  value: "No",
+                },
+                {
+                  questionNumber: "Q11",
+                  operator: "includes_option",
+                  value: "I do not see a need",
+                },
+              ],
+              fallback: "skip",
+            });
+            const q12ExitLogic = JSON.stringify({
+              type: "exit_if",
+              conditions: [
+                {
+                  questionNumber: "Q10",
+                  operator: "equals_option",
+                  value: "No",
+                },
+              ],
+            });
+            await client.execute({
+              sql: "UPDATE questions SET is_exit_point = 1, exit_logic = ?, conditional_logic = ? WHERE question_number = 'Q12' OR order_index = 12",
+              args: [q12ExitLogic, q12CondLogic],
+            });
+            console.log("Q10 -> Q12 direct conditional exit rule applied.");
           } catch (exitErr) {
             console.warn("Exit logic migration error:", exitErr);
           }
@@ -347,8 +373,8 @@ async function autoSeed() {
     { sectionId: sec["B"], questionNumber: "Q8", orderIndex: 8, questionText: "How concerned are you about indoor air quality and pollution inside your home?", questionType: "radio" as const, options: ["Very concerned", "Somewhat concerned", "Neutral", "Not very concerned", "Not concerned at all"] },
     { sectionId: sec["B"], questionNumber: "Q9", orderIndex: 9, questionText: "Do you currently own or regularly use an air purifier at home?", questionType: "radio" as const, options: ["Yes", "No", "Used one previously"] },
     { sectionId: sec["B"], questionNumber: "Q10", orderIndex: 10, questionText: "Considering the current severity of air pollution, do you feel the need to own an air purifier in the near future?", questionType: "radio" as const, options: ["Yes", "No", "Maybe"] },
-    { sectionId: sec["B"], questionNumber: "Q11", orderIndex: 11, questionText: "What would be the main reasons for you to consider an air purifier? (Select up to 3)", questionType: "checkbox" as const, maxSelections: 3, hasOtherOption: true, isExitPoint: true, exitLogic: JSON.stringify({ type: "exit_if", conditions: [{ questionNumber: "Q10", operator: "equals_option", value: "No" }] }), options: ["High outdoor pollution / AQI", "Cleaner indoor air", "Children's health", "Elderly family members", "Dust / allergy concerns", "Smoke / odour", "General preventive health / wellness", "I do not see a need"] },
-    { sectionId: sec["B"], questionNumber: "Q12", orderIndex: 12, questionText: "If you would NOT consider buying an air purifier, what is the main reason?", questionType: "radio" as const, hasOtherOption: true, conditionalLogic: '{"type":"show_if","conditions":[{"questionNumber":"Q11","operator":"includes_option","value":"I do not see a need"}],"fallback":"skip"}', researcherNote: "If respondent is clearly not interested, continue with profile/brand perception questions as useful; do not force purchase-intent answers.", options: ["Too expensive", "Do not think I need one", "Do not know enough about air purifiers", "Do not trust their effectiveness", "Filter / maintenance cost", "Already have one"] },
+    { sectionId: sec["B"], questionNumber: "Q11", orderIndex: 11, questionText: "What would be the main reasons for you to consider an air purifier? (Select up to 3)", questionType: "checkbox" as const, maxSelections: 3, hasOtherOption: true, isExitPoint: false, exitLogic: null, conditionalLogic: '{"type":"show_if","conditions":[{"questionNumber":"Q10","operator":"not_equals_option","value":"No"}],"fallback":"skip"}', options: ["High outdoor pollution / AQI", "Cleaner indoor air", "Children's health", "Elderly family members", "Dust / allergy concerns", "Smoke / odour", "General preventive health / wellness", "I do not see a need"] },
+    { sectionId: sec["B"], questionNumber: "Q12", orderIndex: 12, questionText: "If you would NOT consider buying an air purifier, what is the main reason?", questionType: "radio" as const, hasOtherOption: true, isExitPoint: true, exitLogic: JSON.stringify({ type: "exit_if", conditions: [{ questionNumber: "Q10", operator: "equals_option", value: "No" }] }), conditionalLogic: '{"type":"show_if","match":"any","conditions":[{"questionNumber":"Q10","operator":"equals_option","value":"No"},{"questionNumber":"Q11","operator":"includes_option","value":"I do not see a need"}],"fallback":"skip"}', researcherNote: "If respondent is clearly not interested, continue with profile/brand perception questions as useful; do not force purchase-intent answers.", options: ["Too expensive", "Do not think I need one", "Do not know enough about air purifiers", "Do not trust their effectiveness", "Filter / maintenance cost", "Already have one"] },
     { sectionId: sec["C"], questionNumber: "Q13", orderIndex: 13, questionText: "Which THREE factors matter most when choosing an air purifier?", questionType: "checkbox" as const, minSelections: 3, maxSelections: 3, options: ["Air-cleaning performance / CADR", "Price", "Filter quality / HEPA filtration", "Annual filter & maintenance cost", "Brand trust", "Low noise", "Design / appearance", "Room coverage", "Air-quality display / smart features", "Warranty & after-sales service"] },
     { sectionId: sec["C"], questionNumber: "Q14", orderIndex: 14, questionText: "Before seeing any Kiyoki concept, what price would you personally consider reasonable for a good air purifier for your home?", questionType: "radio" as const, options: ["Below ₹8,000", "₹8,000-9,999", "₹10,000-11,999", "₹12,000-14,999", "₹15,000-19,999", "₹20,000+"] },
     { sectionId: sec["C"], questionNumber: "Q15", orderIndex: 15, questionText: "Where would you be most comfortable buying an air purifier?", questionType: "radio" as const, hasOtherOption: true, options: ["Amazon", "Flipkart", "Brand website", "Electronics / retail store", "Through a trusted dealer"] },

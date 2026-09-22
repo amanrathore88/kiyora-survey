@@ -37,14 +37,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Validate session in 1 query
+    // 2. Validate session in 1 query (allow both in_progress and completed so exit point questions are never lost)
     const sessionRows = await db
       .select({ id: surveySessions.id })
       .from(surveySessions)
       .where(
         and(
           eq(surveySessions.sessionToken, sessionToken),
-          eq(surveySessions.status, "in_progress")
+          inArray(surveySessions.status, ["in_progress", "completed"])
         )
       )
       .limit(1);

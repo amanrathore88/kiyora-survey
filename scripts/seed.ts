@@ -48,7 +48,7 @@ interface QuestionSeedData {
   hasOtherOption?: boolean;
   conditionalLogic?: string;
   isExitPoint?: boolean;
-  exitLogic?: string;
+  exitLogic?: string | null;
   researcherNote?: string;
   options: string[];
 }
@@ -279,7 +279,7 @@ async function seed() {
       questionType: "radio",
       options: ["Yes", "No", "Maybe"],
     },
-{
+    {
       sectionId: sec["B"],
       questionNumber: "Q11",
       orderIndex: 11,
@@ -288,16 +288,18 @@ async function seed() {
       questionType: "checkbox",
       maxSelections: 3,
       hasOtherOption: true,
-      isExitPoint: true,
-      exitLogic: JSON.stringify({
-        type: "exit_if",
+      isExitPoint: false,
+      exitLogic: null,
+      conditionalLogic: JSON.stringify({
+        type: "show_if",
         conditions: [
           {
             questionNumber: "Q10",
-            operator: "equals_option",
+            operator: "not_equals_option",
             value: "No",
           },
         ],
+        fallback: "skip",
       }),
       options: [
         "High outdoor pollution / AQI",
@@ -318,9 +320,26 @@ async function seed() {
         "If you would NOT consider buying an air purifier, what is the main reason?",
       questionType: "radio",
       hasOtherOption: true,
+      isExitPoint: true,
+      exitLogic: JSON.stringify({
+        type: "exit_if",
+        conditions: [
+          {
+            questionNumber: "Q10",
+            operator: "equals_option",
+            value: "No",
+          },
+        ],
+      }),
       conditionalLogic: JSON.stringify({
         type: "show_if",
+        match: "any",
         conditions: [
+          {
+            questionNumber: "Q10",
+            operator: "equals_option",
+            value: "No",
+          },
           {
             questionNumber: "Q11",
             operator: "includes_option",
